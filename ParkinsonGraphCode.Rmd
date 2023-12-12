@@ -1,0 +1,753 @@
+---
+output:
+  reprex::reprex_document:
+    venue: "gh"
+    advertise: FALSE
+    session_info: TRUE
+    style: TRUE
+    comment: "#;-)"
+    tidyverse_quiet: FALSE
+    std_out_err: FALSE
+knit: reprex::reprex_render
+reprex:
+  suppress_urls: FALSE
+---
+
+# Construcción de un grafo RDF a partir de proteínas relacionadas con la enfermedad de Parkinson
+
+```{r message=FALSE, echo=FALSE}
+library(rdflib)
+library(UniProt.ws)
+library(stringr)
+library(dplyr)
+library(rentrez)
+library(ontologyIndex)
+library(SPARQL)
+```
+
+
+## Obtención de los datos de Uniprot.
+
+```{r}
+up <- UniProt.ws()
+
+#Cargamos el csv que contiene la clave que vamos a utilizar para la consulta (Entry en Uniprot)
+UniprotParkinson <- read.csv("uniprotkb_cc_disease_Parkinson_2023_11_28.list", header = FALSE)
+## Creamos una lista con los datos.
+UniprotList <- UniprotParkinson$V1
+
+## Seleccionamos el taxID de Homo sapiens.
+up <- UniProt.ws(taxId=9606)
+
+## Utilizamos la lista de proteínas que obtuvimos de UniprotKB como claves
+keys <- UniprotList
+
+## Seleccionamos las columnas que formarán nuestro df
+columns <- c("cc_disease", "accession", "cc_interaction", "gene_names", "xref_ensembl", "xref_geneid", "xref_alphafolddb", "length", "protein_name", "sequence", "go_c", "go_p", "go_f", "date_created", "date_modified")
+
+## Indicamos que utilizaremos el número de Entry de UniprotKB para hacer la consulta y descargar el df.
+kt <- "UniProtKB"
+
+PD_df_rest <- UniProt.ws::select(up, keys, columns, kt)
+
+```
+
+
+## Procesado del dataframe
+
+Formateamos el dataframe para automatizar en la medida de lo posible la construcción de las tripletas, extrayendo aquellos códigos que necesitemos como parte de las IRIs, eliminando los elementos innecesarios y en los casos en que las variables presentan más de un elemento, los separaremos siguiendo un patrón común.
+
+```{r}
+PD_df <- PD_df_rest
+
+## Nos quedamos con el primer nombre de gen, el cual formará parte de nuestra entidad. 
+PD_df$From <- sapply(strsplit(PD_df$From, " "), function(x) x[1])
+
+## Formato para Involvement.In.Disease:
+MIM <- "MIM:\\d+"
+## Extraemos la parte del str que contenga nuestro patrón
+mim_list <- str_extract_all(PD_df$Involvement.in.disease, MIM)
+## Convertimos la lista a una cadena con espacios
+PD_df$Involvement.in.disease <- sapply(mim_list, function(x) paste(x, collapse = " "))
+## Eliminamos la cabecera del código MIM
+PD_df$Involvement.in.disease <- gsub("MIM:", "", PD_df$Involvement.in.disease)
+## Marcamos los valores faltantes como NA.
+PD_df$Involvement.in.disease <- ifelse(PD_df$Involvement.in.disease == "", NA, PD_df$Involvement.in.disease)
+
+#Formato para GO:
+## Establecemos una función que extrae aquellos que haga match con el patrón de forma similar a como hicimos con los códigos MIM.
+extraer_GO <- function(data, column) {
+  GO <- "GO:\\d+"
+  GO_list <- str_extract_all(data[[column]], GO)
+  data[[column]] <- sapply(GO_list, function(x) paste(x, collapse = " "))
+  data[[column]] <- gsub("GO:", "", data[[column]])
+  return(data)
+}
+## Aplicamos la función a las columnas relevantes
+columns_to_process <- c("Gene.Ontology..cellular.component.", "Gene.Ontology..biological.process.", "Gene.Ontology..molecular.function.")
+for (col in columns_to_process) {
+  PD_df <- extraer_GO(PD_df, col)
+}
+
+## Formato para interacts.with.
+PD_df$Interacts.with <- gsub(" ", "", PD_df$Interacts.with)
+PD_df$Interacts.with <- gsub(";", " ", PD_df$Interacts.with)
+
+## Formato para Gene.Names
+PD_df$Gene.Names <- strsplit(PD_df$Gene.Names, " ")
+
+## Formato para Ensembl
+## Patrón de búsqueda
+Ens <- "ENST\\d+\\.\\d+"
+## Aplicamos la extracción de todos los patrones en cada str
+enst_list <- str_extract_all(PD_df$Ensembl, Ens)
+## Convertimos la lista a una cadena con espacios
+PD_df$Ensembl <- sapply(enst_list, function(x) paste(x, collapse = " "))
+
+## Formato para Alphafold y GeneID
+PD_df$AlphaFoldDB <- gsub(";", "", PD_df$AlphaFoldDB)
+PD_df$GeneID <- gsub(";", "", PD_df$GeneID)
+
+Nombre_col <- names(PD_df)
+
+
+PD_df$Gene.Ontology..biological.process.[PD_df$Gene.Ontology..biological.process. == "NA"] <- NA
+
+PD_df$Gene.Ontology..molecular.function.[PD_df$Gene.Ontology..molecular.function. == "NA"] <- NA
+
+```
+
+
+## Traducir valores a IRIs.
+
+En este apartado adaptaremos los valores contenidos en nuestros datos en IRIs, tanto los recursos (presentes en las columnas) como las propiedades (los nombres de las columnas).
+
+Las IRIS que se utilizarán se pueden ver a continuación en la representación del dataframe *IRIs_translation*.
+Se puede observar como la IRI para los tipos ClassElement incluye la parte común a todos ellos y especifica cómo se completaría para cada caso, siendo mediante el número de Entry de Uniprot para las instancias de la clase proteína y secuencia, mediante el número de Entry del NCBI para los genes, el código MIM para las enfermedades y la parte numérica del código de Gene Ontology para los elementos derivados de esta ontología. 
+
+```{r}
+descriptions <- c("ProteinClassElement", "label", "Contributes to condition", "SameAs", "InteractsWith", "TranscribedTo", "HasID", "HasProteinSequence", "PartOf", "ParticipatesIn", "HasFunction", "DateCreated", "DateModified", "Type", "HasSize", "SequenceClassElement", "GeneClassElement", "DiseaseClass", "DiseaseClassElement", "CellularComponentClass", "CellularComponentClassElement", "BiologicalProcessClass", "BiologicalProcessClassElement", "MolecularFunctionClass", "MolecularFunctionClassElement", "SequenceClass", "GeneClass")
+
+IRIs_format <- c("http://esd.bioinf.org/protein/EntryUniprot", "http://www.w3.org/2000/01/rdf-schema#label", "http://purl.obolibrary.org/obo/RO/_0003302", "https://schema.org/sameAs", "http://purl.obolibrary.org/obo/RO/_0002434", "http://purl.obolibrary.org/obo/RO_0002511", "http://www.bioassayontology.org/bao#BAO_0000383", "http://www.bioassayontology.org/bao#BAO_0002818", "http://purl.obolibrary.org/obo/BFO_000005", "http://purl.obolibrary.org/obo/RO_000005", "http://www.bioassayontology.org/bao#BAO_000310", "https://schema.org/dateCreated", "https://schema.org/dateModified", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://purl.obolibrary.org/obo/ICEO_0000290", "http://esd.bioinf.org/sequence/EntryUniprot", "https://identifiers.org/ncbigene/EntryNCBI",  "http://purl.obolibrary.org/obo/OGMS_0000031", "http://purl.uniprot.org/mim/EntryMIM", "http://purl.obolibrary.org/obo/GO_0005575", "http://purl.obolibrary.org/obo/GO_ENTRYgo", "http://purl.obolibrary.org/obo/GO_0008150", "http://purl.obolibrary.org/obo/GO_ENTRYgo", "http://purl.obolibrary.org/obo/GO_0003674", "http://purl.obolibrary.org/obo/GO_ENTRYgo", "http://purl.obolibrary.org/obo/OGI_0000025", "http://semanticscience.org/resource/SIO_010035" ) 
+
+IRIs_translation <- data.frame(description = descriptions, IRI = IRIs_format, stringsAsFactors = FALSE)
+IRIs_translation <- IRIs_translation[order(IRIs_translation$IRI), ]
+knitr::kable(IRIs_translation,row.names = FALSE, align = "c" )
+
+```
+
+### IRIs para los recursos
+
+En este apartado se llevará a cabo el tratamiento sobre los Sujetos y Objetos de nuestras tripletas.
+En algunos casos la variable contiene NAs que afectan a la generación de la IRI, por lo que su procesamiento tendrá en cuenta este hecho. Esto ocurre para las variables: *Involvement in disease*, *interacts with*, aquellas referentes a Gene Ontology (*Biological process* y *Molecular Function*)
+```{r}
+IRIs <- PD_df
+
+## Se genera una IRI para la entidad principal del grafo a partir de la columna "From".
+IRIs$From <- paste0("http://esd.bioinf.org/protein/", IRIs$From)
+
+## También para la entidad secuencia de cada uno de las proteínas.
+SequenceDf <- IRIs[,c(3,11,9)] ## Se guarda la secuencia de aa con el identificador de cada proteína.
+SequenceDf$Entry <- paste0("http://esd.bioinf.org/sequence/", SequenceDf$Entry)
+
+IRIs$Sequence <- paste0("http://esd.bioinf.org/sequence/", IRIs$Entry)
+
+IRIs$Involvement.in.disease <- sapply(IRIs$Involvement.in.disease, function(x) {
+  if (!is.na(x) && nchar(x) > 0) {
+    return(paste0("http://purl.uniprot.org/mim/", strsplit(x, " ")[[1]]))
+  } else {
+    return(x)  
+  }
+}, USE.NAMES = FALSE)
+
+
+## Crear IRIs para la columna Entry (Uniprot)
+IRIs$Entry <- paste0("https://www.uniprot.org/uniprotkb/", IRIs$Entry,"/entry")
+
+## Crear IRIs para la columna Interacts with:
+IRIs$Interacts.with <- sapply(IRIs$Interacts.with, function(x) {
+  if (!is.na(x)) {
+    paste0("http://esd.bioinf.org/protein/", unlist(strsplit(x, " ")))
+  } else {
+    NA
+  }
+}, USE.NAMES = FALSE)
+
+
+## Crear IRIs para las columnas de la GO: 
+## 
+IRIs$Gene.Ontology..biological.process. <- sapply(IRIs$Gene.Ontology..biological.process., function(x) {
+  if (!is.na(x) && nchar(x) > 0) {
+    return(paste0("http://purl.obolibrary.org/obo/GO_", strsplit(x, " ")[[1]]))
+  } else {
+    return(x)
+  }
+}, USE.NAMES = FALSE)
+
+IRIs$Gene.Ontology..molecular.function. <- sapply(IRIs$Gene.Ontology..molecular.function., function(x) {
+  if (!is.na(x) && nchar(x) > 0) {
+    return(paste0("http://purl.obolibrary.org/obo/GO_", strsplit(x, " ")[[1]]))
+  } else {
+    return(x)  ## Mantener el valor original si la celda está vacía
+  }
+}, USE.NAMES = FALSE)
+
+ 
+IRIs$Gene.Ontology..cellular.component. <- sapply(strsplit(IRIs$Gene.Ontology..cellular.component., " "), function(x) paste0("http://purl.obolibrary.org/obo/GO_", x))
+
+## Crear IRIS para alphafold
+IRIs$AlphaFoldDB <- paste0("https://alphafold.ebi.ac.uk/entry/", IRIs$AlphaFoldDB)
+
+
+## Crear IRIs para la columna Ensembl:
+IRIs$Ensembl <- sapply(IRIs$Ensembl, function(x) {
+  if (!is.na(x)) {
+    paste0("http://esd.bioinf.org/ensembl.transcript/", unlist(strsplit(x, " ")))
+  } else {
+    NA
+  }
+}, USE.NAMES = FALSE)
+
+## Crear IRIs para GeneID 
+IRIs$GeneID <- paste0("https://identifiers.org/ncbigene/", IRIs$GeneID)
+#https://identifiers.org/ncbigene/4728 
+
+```
+
+### IRIs para las propiedades
+
+A continuación se modificarán los nombres de las columnas con el fin de obtener la mayor parte de las propiedades (predicados) en formato IRI.
+
+```{r}
+colnames(IRIs) <- c("Proteina", "http://purl.obolibrary.org/obo/RO_0003302", "https://schema.org/sameAs", "http://purl.obolibrary.org/obo/RO_0002434", "http://www.w3.org/2000/01/rdf-schema#label", "http://purl.obolibrary.org/obo/RO_0002511", "http://semanticscience.org/resource/SIO_010079", "TieneEstructura3D", "http://edamontology.org/data_1249", "http://purl.obolibrary.org/obo/NCIT_C165060", "http://www.bioassayontology.org/bao#BAO_0002818", "http://purl.obolibrary.org/obo/BFO_0000050", "http://purl.obolibrary.org/obo/RO_0000056", "http://www.bioassayontology.org/bao#BAO_0003105", "https://schema.org/dateCreated", "https://schema.org/dateModified")
+
+IRI_col <- names(IRIs)
+
+Properties <- data.frame(Nombre = Nombre_col, IRI = IRI_col)
+
+cnSeq <- c("Entry", "http://www.w3.org/2000/01/rdf-schema#label", "http://purl.obolibrary.org/obo/ICEO_0000290")
+
+colnames(SequenceDf) <- cnSeq
+
+```
+
+## Generación de tripletas
+
+En este apartado se genera el fichero rdf utilizando las funciones *rdf()*, *rdf_add()* y *rdf_serialize()* contenidas en el paquete *rdflib*.
+
+Comenzaremos generando un objeto rdf al que le añadiremos las tripletas en pasos sucesivos:
+```{r}
+rdf <- rdf()
+rdf
+```
+
+A continuación se muestra como se añaden las tripletas utilizando una serie de bucles sobre los distintos dataframes que se generan, cada uno de los cuales automatizará el proceso para cada una de las entidades principales.
+
+### Entidad Protein.
+
+```{r}
+## Eliminamos las columnas que no serán parte de las tripletas con el sujeto "Proteina" ("Ensembl", "Gene.Names" , Alphafold" y "Length")
+ProteinDf <- IRIs[,-c(5,6,8,9)]
+ProteinDfnames <- names(PD_df[,-c(5,6,8,9)])
+
+colnames(ProteinDf) <- c("Proteina", "http://purl.obolibrary.org/obo/RO_0003302", "https://schema.org/sameAs", "http://purl.obolibrary.org/obo/RO_0002434", "http://semanticscience.org/resource/SIO_010079", "http://www.w3.org/2000/01/rdf-schema#label", "http://www.bioassayontology.org/bao#BAO_0002818", "http://purl.obolibrary.org/obo/BFO_0000050", "http://purl.obolibrary.org/obo/RO_0000056", "http://www.bioassayontology.org/bao#BAO_0003105", "https://schema.org/dateCreated", "https://schema.org/dateModified")
+
+
+## Añadimos columna Type.Protein para clasificar nuestra instancia.
+
+ProteinDf$'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' <- "http://purl.obolibrary.org/obo/OGI.owl#Protein"
+```
+
+Debido a que para esta entidad existen principalmente 2 tipos de datos, se va a dividir el proceso en 2 bucles, uno que creará tripletas en las que para cada sujeto solo existe un posible objeto y otro que lo hará cuando exista la posibilidad de que una tripleta pueda contener relaciones entre 1 sujeto y más de 1 objeto.
+
+#### 1 elemento por celda
+
+```{r}
+## Seleccionamos aquellas columnas que solo presentan un elemento.
+ProteinDf1 <- ProteinDf[,c(1,3,5,6,7,11,12,13)]
+ProteinDf1[, c(6, 7)] <- lapply(ProteinDf1[, c(6, 7)], as.Date)
+
+num_filas <- nrow(ProteinDf1)
+num_columnas <- ncol(ProteinDf1)
+for (i in 1:num_filas) {
+  for (j in 2:num_columnas) {
+    subject <- ProteinDf1[i, 1]  
+    predicate <- names(ProteinDf1)[j]  
+    object <- ProteinDf1[i, j]
+    rdf <- rdf_add(rdf, subject, predicate, object)
+    }
+  }
+
+rdf
+
+
+```
+
+#### Varios elementos por celda (Filas:  ) 
+
+```{r}
+
+ProteinDf2 <- ProteinDf[,-c(3,5,6,7,11,12,13)]
+ProteinDf2$`http://purl.obolibrary.org/obo/RO_0002434` <- as.list(ProteinDf2$`http://purl.obolibrary.org/obo/RO_0002434`)
+
+num_columnas2 = ncol(ProteinDf2)
+num_filas2 = nrow(ProteinDf2)
+
+for (i in 1:num_filas2) {
+  for (j in 2:num_columnas2) {
+    subject <- ProteinDf2[i, 1][[1]]
+    predicate <- names(ProteinDf2)[j]
+    object <- ProteinDf2[i, j][[1]]
+    elementos <- unlist(object)
+    num_el <- length(elementos)
+    for (k in 1:num_el) {
+    rdf_add(rdf, subject, predicate, elementos[k])  
+    }
+  }
+}
+
+rdf
+
+```
+
+
+
+### Entidad Gene
+
+```{r}
+GeneDf <- IRIs[,c(7,5,6)]
+
+GeneCol <- colnames(GeneDf)
+GeneCol[1] <- "Gene"
+colnames(GeneDf) <- GeneCol
+
+## Añadimos la columna con el tipo Gene.
+GeneDf$'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' <- "http://semanticscience.org/resource/SIO_010035"
+```
+
+```{r}
+num_filas <- nrow(GeneDf)
+num_columnas <- ncol(GeneDf)
+for (i in 1:num_filas) {
+  for (j in 2:num_columnas) {
+    subject <- GeneDf[i, 1][[1]]
+    predicate <- names(GeneDf)[j]
+    object <- GeneDf[i, j][[1]]
+    elementos <- unlist(object)
+    num_el <- length(elementos)
+    for (k in 1:num_el) {
+      rdf_add(rdf, subject, predicate, elementos[k])  
+    }
+  }
+}
+
+## Etiquetamos la clase Gene.
+rdf <- rdf_add(rdf, subject = "http://semanticscience.org/resource/SIO_010035", predicate = "http://www.w3.org/2000/01/rdf-schema#label" , object = "Gene")
+
+## Etiquetamos los transcritos de cada gen como pertenecientes a la clase transcript.
+transcripts <- unlist(GeneDf$`http://purl.obolibrary.org/obo/RO_0002511`)
+for (i in seq_along(transcripts)) {
+  rdf <- rdf_add(rdf, subject = transcripts[i], predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" , object = "http://purl.obolibrary.org/obo/SO_0000673")
+  }
+
+rdf
+
+```
+
+### Entidad Sequence
+
+```{r}
+## Añadimos la columna con el tipo Peptide al dataframe SequenceDf.
+SequenceDf$'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' <- "http://purl.obolibrary.org/obo/OGI_0000025"
+SequenceDf$`http://purl.obolibrary.org/obo/ICEO_0000290` <- as.integer(SequenceDf$`http://purl.obolibrary.org/obo/ICEO_0000290`)
+```
+
+```{r}
+num_filas <- nrow(SequenceDf)
+num_columnas <- ncol(SequenceDf)
+for (i in 1:num_filas) {
+  for (j in 2:num_columnas) {
+    subject <- SequenceDf[i, 1]  
+    predicate <- names(SequenceDf)[j]  
+    object <- SequenceDf[i, j]
+    rdf <- rdf_add(rdf, subject, predicate, object)
+    }
+  }
+
+## Etiquetamos la clase Peptide sequence
+rdf <- rdf_add(rdf, subject = "http://purl.obolibrary.org/obo/OGI_0000025", predicate = "http://www.w3.org/2000/01/rdf-schema#label" , object = "Peptide sequence")
+
+rdf
+
+
+```
+
+### Clases restantes
+
+#### Clasificamos como proteínas aquellas que participaban en la relación Interacts.With como objeto.
+
+Podremos difernciarlas de las 67 que añadimos en el apartado *Entidad Protein* ya que no se les va a añadir ninguna etiqueta con su nombre completo.
+
+```{r}
+## Obtenemos todas las proteínas independientemente de con quién interactuaran y eliminamos las filas que no tenían ninguna.
+ProtIntDf <- as.data.frame(unlist(ProteinDf2$`http://purl.obolibrary.org/obo/RO_0002434`))
+colnames(ProtIntDf) <- "Proteina"
+ProtIntDf <- na.omit(ProtIntDf)
+
+## Seleccionamos aquellas que no hayamos clasificado anteriormente para evitar tripletas redundantes.
+ProtIntFinal <- anti_join(ProtIntDf, ProteinDf2)
+ProtIntFinal <- unique(ProtIntFinal)
+
+for (i in 1:nrow(ProtIntFinal)) {
+    subject <- ProtIntFinal[i,1]  
+    predicate <- "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"  
+    object <- "http://purl.obolibrary.org/obo/OGI.owl#Protein"
+    rdf <- rdf_add(rdf, subject, predicate, object)
+    }
+
+## Etiquetamos la clase Protein.
+rdf <- rdf_add(rdf, subject = "http://purl.obolibrary.org/obo/OGI.owl#Protein", predicate = "http://www.w3.org/2000/01/rdf-schema#label" , object = "Protein")
+
+rdf
+
+```
+
+#### Clasificamos como Disease las entidades contenidas en la columna Involvement.In.Disease. 
+
+```{r}
+## Seleccionamos todas las enfermedades distintas y eliminamos los valores faltantes.
+MIMs <- IRIs$`http://purl.obolibrary.org/obo/RO_0003302`
+listaMIM <- unique(unlist(MIMs))
+listaMIM <- Filter(function(x) x != "", listaMIM)
+MIMDf <- data.frame(listaMIM)
+
+MIMDf$'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' <- "http://purl.obolibrary.org/obo/OGMS_0000031"
+
+
+#rdfDis <- rdf()
+for (i in 1:nrow(MIMDf)) {
+    subject <- MIMDf[i,1]  
+    predicate <- "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    object <- "http://purl.obolibrary.org/obo/OGMS_0000031"
+    rdf <- rdf_add(rdf, subject, predicate, object)
+    }
+
+rdf <- rdf_add(rdf, subject = "http://purl.obolibrary.org/obo/OGMS_0000031", predicate = "http://www.w3.org/2000/01/rdf-schema#label" , object = "Disease")
+
+rdf
+
+```
+##### Añadimos una descripción de la enfermedad como label:
+
+En este caso el etiquetado se realizará mediante una consulta a OMIM utilizando el paquete *rentrez*, mediante la cual obtendremos la descripción de cada una de las enfermedades.
+
+```{r}
+
+## Obtenemos los códigos únicos para todas las enfermedades.
+MIMdiseasesUnique <- unique(unlist(strsplit(PD_df$Involvement.in.disease, " ")))
+
+## Realizamos la consulta y almacenamos el resultado en un dataframe.
+Disease_summ <- entrez_summary(db="omim", id=MIMdiseasesUnique)
+ID_and_Disease <- as.data.frame(t(extract_from_esummary(Disease_summ, c("uid","title"))), row.names = FALSE)
+
+## Formateamos nuestras IRIS y añadimos las tripletas con las etiquetas.
+ID_and_Disease$uid <- paste0("http://purl.uniprot.org/mim/", ID_and_Disease$uid)
+
+for (i in 1:nrow(ID_and_Disease)) {
+    subject <- ID_and_Disease[i,1]  
+    predicate <- "http://www.w3.org/2000/01/rdf-schema#label"  
+    object <- ID_and_Disease[i,2]
+    rdf <- rdf_add(rdf, subject, predicate, object)
+    }
+
+rdf
+
+
+```
+
+#### Gene Ontology 
+
+Para el etiquetado de cada una de las instancias de la Gene Ontology se va a utilizar el paquete *ontologyIndex*, no obstante, algunos de los elementos de Gene Ontology presentes en nuestros datos no presentan su correspondiente descripción en este paquete, por lo que no será posible etiquetarlos. En este caso seguirán siendo accesibles mediante su IRI.
+
+```{r}
+
+GOlist <- c(PD_df$Gene.Ontology..cellular.component., PD_df$Gene.Ontology..biological.process., PD_df$Gene.Ontology..molecular.function.)
+GOUnique <- unique(unlist(strsplit(GOlist, " ")))
+GOUnique <- GOUnique[!is.na(GOUnique)]
+
+## Preparamos el formato para comparar con go.
+GOlistForm <- paste0("GO:", GOUnique)
+
+## Cargamos los datos de GO procedentes de ontologyIndex
+data(go)
+
+## Obtenemos las etiquetas específicas para nuestra lista de GO.
+GOlabels <- data.frame(GOnum = GOUnique, GOcode = go$id[GOlistForm], GOdescription = go$name[GOlistForm])
+
+GOlabels$GOnum <- sapply(strsplit(GOlabels$GOnum, " "), function(x) paste0("http://purl.obolibrary.org/obo/GO_", x))
+
+## Eliminamos del df aquellos casos que no presentan descripción.
+GOlabels <- GOlabels[complete.cases(GOlabels$GOdescription), ]
+
+
+for (i in 1:nrow(GOlabels)) {
+    subject <- GOlabels[i,1]  
+    predicate <- "http://www.w3.org/2000/01/rdf-schema#label"  
+    object <- GOlabels[i,3]
+    rdf <- rdf_add(rdf, subject, predicate, object)
+    }
+
+rdf
+
+```
+
+##### Clasificar subclases Gene Ontology.
+
+A continuación vamos a obtener todas las clases ancestros de nuestras clases de la Gene Ontology y las vamos a etiquetar aprovechando la función *get_ancestors()* incorporada en *ontologyIndex*, utilizando como input el vector con los valores de Gene Ontology obtenido en el apartado anterior, a partir del cual se realizará una comparación con los elementos en la base de dato *go* y se obtendrán los códigos GO y su descripción, los cuales se adaptarán al formato necesario para generar nuestras tripletas.
+
+La función *get_ancestors()* nos devuelve un vector con todos los ancestros de la clase que utilicemos como input, empezando por la clase con la jerarquía más alta y continuando hasta la clase Input en cuestión. Aprovechando esto se va a generar la clasificación jerárquica mediante una serie de bucles, los cuales empezarán por el último elemento del vector y lo relacionará con el anterior mediante un predicado *TypeOf*. Además se van a acumular todos los códigos de las clases para posteriormente etiquetarlas con su descripción.
+
+```{r}
+GOtotal <- c()
+for (i in seq_along(GOlistForm)) {
+  ancestors <- get_ancestors(go, GOlistForm[i])
+  sujetos <- ancestors[-1]
+  objetos <- ancestors[-length(ancestors)]
+  GOtotal <- c(GOtotal, sujetos, objetos)
+  sujetos <- sapply(objetos, function(x) {
+    if (!is.na(x) && nchar(x) > 0) {
+      return(paste0("http://purl.obolibrary.org/obo/GO_", gsub("GO:", "", go$id[GOlistForm][i])))
+    } else {
+      return(x)  
+    }
+  }, USE.NAMES = FALSE)
+  objetos_nuevos <- sapply(objetos, function(x) {
+    if (!is.na(x) && nchar(x) > 0) {
+      return(paste0("http://purl.obolibrary.org/obo/GO_", gsub("GO:", "", x)))
+    } else {
+      return(x)  
+    }
+  }, USE.NAMES = FALSE)
+  for (k in seq_along(sujetos)) {
+    rdf <- rdf_add(rdf, subject = sujetos[k], 
+                   predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", 
+                   object = objetos_nuevos[k])
+  }
+  
+}
+
+
+# Etiquetado de las clases.
+ancestorsLabel <- go$name[GOtotal]
+GOtotalIRI <- paste0("http://purl.obolibrary.org/obo/GO_", gsub("GO:", "", GOtotal))
+
+for (i in seq_along(ancestorsLabel)) {
+  rdf <- rdf_add(rdf, subject = GOtotalIRI[i], 
+                   predicate = "http://www.w3.org/2000/01/rdf-schema#label", 
+                   object = ancestorsLabel[i])
+}
+
+
+rdf
+
+
+```
+
+
+### Añadir al grafo RDF.
+
+Mediante la función *rdf_serialize()* construimos el fichero rdf definitivo que publicaremos en Blazegraph, el cual contiene un total de 20322 tripletas.
+
+```{r eval=FALSE}
+rdf_serialize(rdf, "ParkinsonRDF.rdf", format = "rdfxml")  
+```
+
+
+## Queries
+
+Para terminar, utilizaremos el paquete *SPARQL* para realizar una serie de consultas a nuestro dataset desde R, haciendo uso del endpoint correspondiente.
+
+```{r}
+endpoint <- "http://155.54.239.183:3045/blazegraph/namespace/RDFParkinson/sparql"
+```
+
+### Devuelve las proteínas que solo interactúen con 1 proteína ordenadas por longitud de su secuencia.
+Vamos a realizar un filtrado asegurándonos de que no existan dos tripletas del tipo *Interacts With* para las proteínas, además filtramos aquellos casos en los que las proteínas interactúen con proteínas de su mismo tipo.
+
+A continuación se accede al valor de la secuencia, el cual es un número entero relacionado con la instancia *Sequence*, que a su vez se relaciona con la proteína mediante el predicado *Has Protein Sequence*.
+
+Por último se ordenan las proteínas de mayor a menor longitud de secuencia.
+
+```{r}
+query1 <- "SELECT ?protein ?sequenceLength
+WHERE {
+  FILTER NOT EXISTS {
+    ?protein <http://purl.obolibrary.org/obo/RO_0002434> ?otherProtein1.
+    ?protein <http://purl.obolibrary.org/obo/RO_0002434> ?otherProtein2.
+    FILTER (?otherProtein1 != ?otherProtein2)
+  }
+  
+  ?protein <http://www.bioassayontology.org/bao#BAO_0002818> ?sequence.
+  ?sequence <http://purl.obolibrary.org/obo/ICEO_0000290> ?sequenceLength.
+}
+ORDER BY DESC(?sequenceLength)"
+
+
+qd1 <- SPARQL(endpoint,query1)
+
+knitr::kable(as.data.frame(qd1$results),row.names = FALSE)
+
+```
+
+
+
+### ¿Qué proteínas en nuestra base de datos interactúan entre ellas?
+
+Devolveremos aquellas proteínas que participan en la relación *Interacts.with* entre proteínas siendo tanto sujetos como objetos en alguno de los casos. La consulta devolverá la IRI propia de nuestro dataset para ambas proteínas. Debido a que las relaciones en el dataset son simétricas, tendremos resultados equivalentes para cada proteína actuando como sujeto y como objeto de la relación.
+
+```{r}
+query1 <- "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?Protein1 ?Protein2 
+WHERE {
+  ?Protein1 <http://purl.obolibrary.org/obo/RO_0002434> ?Protein2 .
+  ?Protein2 <http://purl.obolibrary.org/obo/RO_0002434> ?Protein1 .
+}
+ORDER BY ?Protein1"
+
+
+qd1 <- SPARQL(endpoint,query1)
+
+knitr::kable(as.data.frame(qd1$results),row.names = FALSE)
+
+```
+
+### ¿Qué Enfermedades se repiten y cuántas veces?
+
+La siguiente consulta devolverá aquellas enfermedades que participen en una relación *Contributes to condition* como objeto más de 1 vez, se contará las veces que aparezca y se mostrará junto con el nombre de la enfermedad, el cual se encuentra en la etiqueta.
+
+```{r}
+query2 <- "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?disease (COUNT(?o) as ?count)
+WHERE {
+  ?s <http://purl.obolibrary.org/obo/RO_0003302> ?o .
+  ?o rdfs:label ?disease .
+}
+GROUP BY ?disease
+HAVING (COUNT(?o) > 1)
+ORDER BY DESC(?count)"
+
+
+qd2 <- SPARQL(endpoint,query2)
+
+knitr::kable(as.data.frame(qd2$results),row.names = FALSE)
+
+
+```
+
+### ¿Qué enfermedades asociadas contienen la palabra "Parkinson" en su descripción?
+
+```{r}
+query3 <- 'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?label 
+WHERE {
+  ?s <http://purl.obolibrary.org/obo/RO_0003302> ?objeto .
+  ?objeto rdfs:label ?label .
+  FILTER( regex(str(?label), "Parkinson", "i") )
+}
+GROUP BY ?label'
+
+
+qd3 <- SPARQL(endpoint,query3)
+
+knitr::kable(as.data.frame(t(qd3$results)),row.names = FALSE, col.names = "Disease")
+
+```
+
+
+### ¿Qué proteínas participan en el desarrollo de más de un tipo de Parkinson?
+
+Seleccionaremos aquellas proteínas con más de un tipo de relación "Contributes to condition" que contenga la palabra Parkinson en su descripción, la cual está presente en su etiqueta.
+
+```{r}
+query4 <- 'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?Protein (COUNT(?label) as ?count)
+WHERE {
+  ?s <http://purl.obolibrary.org/obo/RO_0003302> ?objeto .
+  ?objeto rdfs:label ?label .
+  ?s rdfs:label ?Protein
+  FILTER( regex(str(?label), "Parkinson", "i") )
+}
+GROUP BY ?Protein
+HAVING (COUNT(?label) > 1)
+'
+
+
+qd4 <- SPARQL(endpoint,query4)
+
+knitr::kable(as.data.frame(qd4$results),row.names = FALSE)
+
+```
+
+
+### ¿Qué tipos de clases contiene el dataset?
+
+```{r}
+query5 <- 'PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?label ?o
+WHERE {
+  ?s <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?o .
+  ?o rdfs:label ?label .
+}
+GROUP BY ?label ?o'
+
+
+qd5 <- SPARQL(endpoint,query5)
+
+knitr::kable(as.data.frame((qd5$results)),row.names = FALSE)
+
+```
+
+
+
+### ¿Cuales son los componentes celulares en los que más proteínas están presentes?
+
+Se van a obtener aquellos 5 componentes celulares que más veces aparezcan, acompañados del número de proteínas de nuestro dataset que forman parte de ellos.  
+
+```{r}
+query6 <- 'SELECT ?o (COUNT(?o) AS ?Proteins)
+WHERE {
+  ?s <http://purl.obolibrary.org/obo/BFO_0000050> ?o .
+}
+GROUP BY ?o
+ORDER BY DESC(?Proteins)
+LIMIT 5'
+
+
+qd6 <- SPARQL(endpoint,query6)
+
+knitr::kable(as.data.frame(qd6$results),row.names = FALSE)
+
+```
+
+### ¿Alguna proteína contiene en su secuencia todos los tipos de aminoácidos? (Buscar dentro del string)
+
+```{r eval=FALSE}
+query6 <- 'SELECT ?s ?o
+WHERE {
+  ?s <http://www.w3.org/2000/01/rdf-schema#label> ?o .
+  FILTER (
+    REGEX(STR(?s), "http://esd.bioinf.org/sequence/") &&
+    REGEX(STR(?o), ".*[A].*[R].*[N].*[D].*[C].*[E].*[Q].*[E].*[G].*[H].*[I].*[L].*[K].*[M].*[F].*[P].*[S].*[T].*[W].*[Y].*[V].*")
+  )
+}'
+
+
+qd6 <- SPARQL(endpoint,query6)
+
+knitr::kable(as.data.frame(qd6$results),row.names = FALSE)
+
+```
+
+
+## Session Info

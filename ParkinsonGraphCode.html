@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Jaime Ñíguez Baeza" />
+
+<meta name="date" content="2023-12-10" />
+
+<title>Construcción de un grafo RDF a partir de proteínas relacionadas con la enfermedad de Parkinson</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Construcción de un grafo RDF a partir de
+proteínas relacionadas con la enfermedad de Parkinson</h1>
+<h4 class="author">Jaime Ñíguez Baeza</h4>
+<h4 class="date">2023-12-10</h4>
+
+
+
+<div id="librerías-utilizadas" class="section level2">
+<h2>Librerías utilizadas</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(rdflib)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(UniProt.ws)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">library</span>(stringr)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="fu">library</span>(rentrez)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="fu">library</span>(ontologyIndex)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="fu">library</span>(SPARQL)</span></code></pre></div>
+</div>
+<div id="obtención-de-los-datos-de-uniprot." class="section level2">
+<h2>Obtención de los datos de Uniprot.</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>up <span class="ot">&lt;-</span> <span class="fu">UniProt.ws</span>()</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#Cargamos el csv que contiene la clave que vamos a utilizar para la consulta (Entry en Uniprot)</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>UniprotParkinson <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">&quot;uniprotkb_cc_disease_Parkinson_2023_11_28.list&quot;</span>, <span class="at">header =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="do">## Creamos una lista con los datos.</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>UniprotList <span class="ot">&lt;-</span> UniprotParkinson<span class="sc">$</span>V1</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="do">## Seleccionamos el taxID de Homo sapiens.</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>up <span class="ot">&lt;-</span> <span class="fu">UniProt.ws</span>(<span class="at">taxId=</span><span class="dv">9606</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="do">## Utilizamos la lista de proteínas que obtuvimos de UniprotKB como claves</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>keys <span class="ot">&lt;-</span> UniprotList</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="do">## Seleccionamos las columnas que formarán nuestro df</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>columns <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;cc_disease&quot;</span>, <span class="st">&quot;accession&quot;</span>, <span class="st">&quot;cc_interaction&quot;</span>, <span class="st">&quot;gene_names&quot;</span>, <span class="st">&quot;xref_ensembl&quot;</span>, <span class="st">&quot;xref_geneid&quot;</span>, <span class="st">&quot;xref_alphafolddb&quot;</span>, <span class="st">&quot;length&quot;</span>, <span class="st">&quot;protein_name&quot;</span>, <span class="st">&quot;sequence&quot;</span>, <span class="st">&quot;go_c&quot;</span>, <span class="st">&quot;go_p&quot;</span>, <span class="st">&quot;go_f&quot;</span>, <span class="st">&quot;date_created&quot;</span>, <span class="st">&quot;date_modified&quot;</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="do">## Indicamos que utilizaremos el número de Entry de UniprotKB para hacer la consulta y descargar el df.</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>kt <span class="ot">&lt;-</span> <span class="st">&quot;UniProtKB&quot;</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>PD_df_rest <span class="ot">&lt;-</span> UniProt.ws<span class="sc">::</span><span class="fu">select</span>(up, keys, columns, kt)</span></code></pre></div>
+</div>
+<div id="formateamos-el-dataframe-para-automatizar-en-la-medida-de-lo-posible-la-construcción-de-las-tripletas." class="section level2">
+<h2>Formateamos el dataframe para automatizar en la medida de lo posible
+la construcción de las tripletas.</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>PD_df <span class="ot">&lt;-</span> PD_df_rest<span class="do">## Nos quedamos con el primer nombre de gen, el cual formará parte de nuestra entidad. </span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>PD_df<span class="sc">$</span>From <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">strsplit</span>(PD_df<span class="sc">$</span>From, <span class="st">&quot; &quot;</span>), <span class="cf">function</span>(x) x[<span class="dv">1</span>])</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="do">## Formato para Involvement.In.Disease:</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>MIM <span class="ot">&lt;-</span> <span class="st">&quot;MIM:</span><span class="sc">\\</span><span class="st">d+&quot;</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="do">## Extraemos la parte del str que contenga nuestro patrón</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>mim_list <span class="ot">&lt;-</span> <span class="fu">str_extract_all</span>(PD_df<span class="sc">$</span>Involvement.in.disease, MIM)</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="do">## Convertimos la lista a una cadena con espacios</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>PD_df<span class="sc">$</span>Involvement.in.disease <span class="ot">&lt;-</span> <span class="fu">sapply</span>(mim_list, <span class="cf">function</span>(x) <span class="fu">paste</span>(x, <span class="at">collapse =</span> <span class="st">&quot; &quot;</span>))</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="do">## Eliminamos la cabecera del código MIM</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>PD_df<span class="sc">$</span>Involvement.in.disease <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">&quot;MIM:&quot;</span>, <span class="st">&quot;&quot;</span>, PD_df<span class="sc">$</span>Involvement.in.disease)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="do">## Marcamos los valores faltantes como NA.</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>PD_df<span class="sc">$</span>Involvement.in.disease <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(PD_df<span class="sc">$</span>Involvement.in.disease <span class="sc">==</span> <span class="st">&quot;&quot;</span>, <span class="cn">NA</span>, PD_df<span class="sc">$</span>Involvement.in.disease)</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#Formato para GO:</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="do">## Establecemos una función que extrae aquellos que haga match con el patrón</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>extraer_GO <span class="ot">&lt;-</span> <span class="cf">function</span>(data, column) {</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  GO <span class="ot">&lt;-</span> <span class="st">&quot;GO:</span><span class="sc">\\</span><span class="st">d+&quot;</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  GO_list <span class="ot">&lt;-</span> <span class="fu">str_extract_all</span>(data[[column]], GO)</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>  data[[column]] <span class="ot">&lt;-</span> <span class="fu">sapply</span>(GO_list, <span class="cf">function</span>(x) <span class="fu">paste</span>(x, <span class="at">collapse =</span> <span class="st">&quot; &quot;</span>))</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  data[[column]] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">&quot;GO:&quot;</span>, <span class="st">&quot;&quot;</span>, data[[column]])</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>  <span class="fu">return</span>(data)</span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>}</span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="do">## Aplicamos la función a las columnas relevantes</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a>columns_to_process <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Gene.Ontology..cellular.component.&quot;</span>, <span class="st">&quot;Gene.Ontology..biological.process.&quot;</span>, <span class="st">&quot;Gene.Ontology..molecular.function.&quot;</span>)</span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="cf">for</span> (col <span class="cf">in</span> columns_to_process) {</span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a>  PD_df <span class="ot">&lt;-</span> <span class="fu">extraer_GO</span>(PD_df, col)</span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a>}</span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="do">## Formato para interacts.with.</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a>PD_df<span class="sc">$</span>Interacts.with <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">&quot; &quot;</span>, <span class="st">&quot;&quot;</span>, PD_df<span class="sc">$</span>Interacts.with)</span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a>PD_df<span class="sc">$</span>Interacts.with <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">&quot;;&quot;</span>, <span class="st">&quot; &quot;</span>, PD_df<span class="sc">$</span>Interacts.with)</span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="do">## ESTO NO FUNCIONA EN TODOS LOS CASOS:: Las isoformas de las proteínas presentes en el dataframe las especificaremos con el formato Proteína(ID)-Isoforma(ID)</span></span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#PD_df$Interacts.with &lt;- gsub(&quot;PRO_(\\d+)\\[(P\\d+)\\]&quot;, &quot;\\2-PRO_\\1&quot;, PD_df$Interacts.with)</span></span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a></span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="do">## Formato para Gene.Names</span></span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a>PD_df<span class="sc">$</span>Gene.Names <span class="ot">&lt;-</span> <span class="fu">strsplit</span>(PD_df<span class="sc">$</span>Gene.Names, <span class="st">&quot; &quot;</span>)</span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a></span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="do">## Formato para Ensembl</span></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="do">## Patrón de búsqueda</span></span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a>Ens <span class="ot">&lt;-</span> <span class="st">&quot;ENST</span><span class="sc">\\</span><span class="st">d+</span><span class="sc">\\</span><span class="st">.</span><span class="sc">\\</span><span class="st">d+&quot;</span></span>
+<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a><span class="do">## Aplicamos la extracción de todos los patrones en cada str</span></span>
+<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a>enst_list <span class="ot">&lt;-</span> <span class="fu">str_extract_all</span>(PD_df<span class="sc">$</span>Ensembl, Ens)</span>
+<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a><span class="do">## Convertimos la lista a una cadena con espacios</span></span>
+<span id="cb3-45"><a href="#cb3-45" tabindex="-1"></a>PD_df<span class="sc">$</span>Ensembl <span class="ot">&lt;-</span> <span class="fu">sapply</span>(enst_list, <span class="cf">function</span>(x) <span class="fu">paste</span>(x, <span class="at">collapse =</span> <span class="st">&quot; &quot;</span>))</span>
+<span id="cb3-46"><a href="#cb3-46" tabindex="-1"></a></span>
+<span id="cb3-47"><a href="#cb3-47" tabindex="-1"></a><span class="do">## Formato para Alphafold y GeneID</span></span>
+<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a>PD_df<span class="sc">$</span>AlphaFoldDB <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">&quot;;&quot;</span>, <span class="st">&quot;&quot;</span>, PD_df<span class="sc">$</span>AlphaFoldDB)</span>
+<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a>PD_df<span class="sc">$</span>GeneID <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">&quot;;&quot;</span>, <span class="st">&quot;&quot;</span>, PD_df<span class="sc">$</span>GeneID)</span>
+<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a></span>
+<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a>Nombre_col <span class="ot">&lt;-</span> <span class="fu">names</span>(PD_df)</span>
+<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a></span>
+<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a></span>
+<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a>PD_df<span class="sc">$</span>Gene.Ontology..biological.process.[PD_df<span class="sc">$</span>Gene.Ontology..biological.process. <span class="sc">==</span> <span class="st">&quot;NA&quot;</span>] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb3-55"><a href="#cb3-55" tabindex="-1"></a></span>
+<span id="cb3-56"><a href="#cb3-56" tabindex="-1"></a>PD_df<span class="sc">$</span>Gene.Ontology..molecular.function.[PD_df<span class="sc">$</span>Gene.Ontology..molecular.function. <span class="sc">==</span> <span class="st">&quot;NA&quot;</span>] <span class="ot">&lt;-</span> <span class="cn">NA</span></span></code></pre></div>
+</div>
+<div id="traducir-valores-a-iris." class="section level2">
+<h2>Traducir valores a IRIs.</h2>
+<p>A continuación se convertirán los valores contenidos en nuestros
+datos en IRIs.</p>
+<p>Lo primero que haremos será crear un dataframe que nos presenta la
+equivalencia entre IRIs y su significado.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>descriptions <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;ProteinClassElement&quot;</span>, <span class="st">&quot;label&quot;</span>, <span class="st">&quot;Contributes to condition&quot;</span>, <span class="st">&quot;SameAs&quot;</span>, <span class="st">&quot;InteractsWith&quot;</span>, <span class="st">&quot;TranscribedTo&quot;</span>, <span class="st">&quot;HasID&quot;</span>, <span class="st">&quot;HasProteinSequence&quot;</span>, <span class="st">&quot;PartOf&quot;</span>, <span class="st">&quot;ParticipatesIn&quot;</span>, <span class="st">&quot;HasFunction&quot;</span>, <span class="st">&quot;DateCreated&quot;</span>, <span class="st">&quot;DateModified&quot;</span>, <span class="st">&quot;Type&quot;</span>, <span class="st">&quot;HasSize&quot;</span>, <span class="st">&quot;SequenceClassElement&quot;</span>, <span class="st">&quot;GeneClassElement&quot;</span>, <span class="st">&quot;DiseaseClass&quot;</span>, <span class="st">&quot;DiseaseClassElement&quot;</span>, <span class="st">&quot;CellularComponentClass&quot;</span>, <span class="st">&quot;CellularComponentClassElement&quot;</span>, <span class="st">&quot;BiologicalProcessClass&quot;</span>, <span class="st">&quot;BiologicalProcessClassElement&quot;</span>, <span class="st">&quot;MolecularFunctionClass&quot;</span>, <span class="st">&quot;MolecularFunctionClassElement&quot;</span>, <span class="st">&quot;SequenceClass&quot;</span>, <span class="st">&quot;GeneClass&quot;</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>IRIs_format <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;http://esd.bioinf.org/protein/EntryUniprot&quot;</span>, <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO/_0003302&quot;</span>, <span class="st">&quot;https://schema.org/sameAs&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO/_0002434&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO_0002511&quot;</span>, <span class="st">&quot;http://www.bioassayontology.org/bao#BAO_0000383&quot;</span>, <span class="st">&quot;http://www.bioassayontology.org/bao#BAO_0002818&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/BFO_000005&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO_000005&quot;</span>, <span class="st">&quot;http://www.bioassayontology.org/bao#BAO_000310&quot;</span>, <span class="st">&quot;https://schema.org/dateCreated&quot;</span>, <span class="st">&quot;https://schema.org/dateModified&quot;</span>, <span class="st">&quot;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/ICEO_0000290&quot;</span>, <span class="st">&quot;http://esd.bioinf.org/sequence/EntryUniprot&quot;</span>, <span class="st">&quot;https://identifiers.org/ncbigene/EntryNCBI&quot;</span>,  <span class="st">&quot;http://purl.obolibrary.org/obo/OGMS_0000031&quot;</span>, <span class="st">&quot;http://purl.uniprot.org/mim/EntryMIM&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/GO_0005575&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/GO_ENTRYgo&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/GO_0008150&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/GO_ENTRYgo&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/GO_0003674&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/GO_ENTRYgo&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/OGI_0000025&quot;</span>, <span class="st">&quot;http://semanticscience.org/resource/SIO_010035&quot;</span> ) </span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>IRIs_translation <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">description =</span> descriptions, <span class="at">IRI =</span> IRIs_format, <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>IRIs_translation <span class="ot">&lt;-</span> IRIs_translation[<span class="fu">order</span>(IRIs_translation<span class="sc">$</span>IRI), ]</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(IRIs_translation, <span class="at">format =</span> <span class="st">&quot;html&quot;</span>,<span class="at">row.names =</span> <span class="cn">FALSE</span>, <span class="at">align =</span> <span class="st">&quot;c&quot;</span> )</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align:center;">
+description
+</th>
+<th style="text-align:center;">
+IRI
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">
+ProteinClassElement
+</td>
+<td style="text-align:center;">
+<a href="http://esd.bioinf.org/protein/EntryUniprot" class="uri">http://esd.bioinf.org/protein/EntryUniprot</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+SequenceClassElement
+</td>
+<td style="text-align:center;">
+<a href="http://esd.bioinf.org/sequence/EntryUniprot" class="uri">http://esd.bioinf.org/sequence/EntryUniprot</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+PartOf
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/BFO_000005" class="uri">http://purl.obolibrary.org/obo/BFO_000005</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+MolecularFunctionClass
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/GO_0003674" class="uri">http://purl.obolibrary.org/obo/GO_0003674</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+CellularComponentClass
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/GO_0005575" class="uri">http://purl.obolibrary.org/obo/GO_0005575</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+BiologicalProcessClass
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/GO_0008150" class="uri">http://purl.obolibrary.org/obo/GO_0008150</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+CellularComponentClassElement
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/GO_ENTRYgo" class="uri">http://purl.obolibrary.org/obo/GO_ENTRYgo</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+BiologicalProcessClassElement
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/GO_ENTRYgo" class="uri">http://purl.obolibrary.org/obo/GO_ENTRYgo</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+MolecularFunctionClassElement
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/GO_ENTRYgo" class="uri">http://purl.obolibrary.org/obo/GO_ENTRYgo</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+HasSize
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/ICEO_0000290" class="uri">http://purl.obolibrary.org/obo/ICEO_0000290</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+SequenceClass
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/OGI_0000025" class="uri">http://purl.obolibrary.org/obo/OGI_0000025</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+DiseaseClass
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/OGMS_0000031" class="uri">http://purl.obolibrary.org/obo/OGMS_0000031</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+InteractsWith
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/RO/_0002434" class="uri">http://purl.obolibrary.org/obo/RO/_0002434</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+Contributes to condition
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/RO/_0003302" class="uri">http://purl.obolibrary.org/obo/RO/_0003302</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+ParticipatesIn
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/RO_000005" class="uri">http://purl.obolibrary.org/obo/RO_000005</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+TranscribedTo
+</td>
+<td style="text-align:center;">
+<a href="http://purl.obolibrary.org/obo/RO_0002511" class="uri">http://purl.obolibrary.org/obo/RO_0002511</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+DiseaseClassElement
+</td>
+<td style="text-align:center;">
+<a href="http://purl.uniprot.org/mim/EntryMIM" class="uri">http://purl.uniprot.org/mim/EntryMIM</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+GeneClass
+</td>
+<td style="text-align:center;">
+<a href="http://semanticscience.org/resource/SIO_010035" class="uri">http://semanticscience.org/resource/SIO_010035</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+HasID
+</td>
+<td style="text-align:center;">
+<a href="http://www.bioassayontology.org/bao#BAO_0000383" class="uri">http://www.bioassayontology.org/bao#BAO_0000383</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+HasProteinSequence
+</td>
+<td style="text-align:center;">
+<a href="http://www.bioassayontology.org/bao#BAO_0002818" class="uri">http://www.bioassayontology.org/bao#BAO_0002818</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+HasFunction
+</td>
+<td style="text-align:center;">
+<a href="http://www.bioassayontology.org/bao#BAO_000310" class="uri">http://www.bioassayontology.org/bao#BAO_000310</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+Type
+</td>
+<td style="text-align:center;">
+<a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type" class="uri">http://www.w3.org/1999/02/22-rdf-syntax-ns#type</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+label
+</td>
+<td style="text-align:center;">
+<a href="http://www.w3.org/2000/01/rdf-schema#label" class="uri">http://www.w3.org/2000/01/rdf-schema#label</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+GeneClassElement
+</td>
+<td style="text-align:center;">
+<a href="https://identifiers.org/ncbigene/EntryNCBI" class="uri">https://identifiers.org/ncbigene/EntryNCBI</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+DateCreated
+</td>
+<td style="text-align:center;">
+<a href="https://schema.org/dateCreated" class="uri">https://schema.org/dateCreated</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+DateModified
+</td>
+<td style="text-align:center;">
+<a href="https://schema.org/dateModified" class="uri">https://schema.org/dateModified</a>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+SameAs
+</td>
+<td style="text-align:center;">
+<a href="https://schema.org/sameAs" class="uri">https://schema.org/sameAs</a>
+</td>
+</tr>
+</tbody>
+</table>
+<div id="iris-para-los-recursos" class="section level3">
+<h3>IRIs para los recursos</h3>
+<p>En este apartado se llevará a cabo el tratamiento sobre los Sujetos y
+Objetos de nuestras tripletas. En algunos casos la variable contiene NAs
+que afectan a la generación de la IRI, por lo que su procesamiento
+tendrá en cuenta este hecho. Esto ocurre para las variables:
+<em>Involvement in disease</em>, <em>interacts with</em>, aquellas
+referentes a Gene Ontology (<em>Biological process</em> y <em>Molecular
+Function</em>)</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>IRIs <span class="ot">&lt;-</span> PD_df</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="do">## Se genera una IRI para la entidad principal del grafo a partir de la columna &quot;From&quot;.</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>IRIs<span class="sc">$</span>From <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;http://esd.bioinf.org/protein/&quot;</span>, IRIs<span class="sc">$</span>From)</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="do">## También para la entidad secuencia de cada uno de las proteínas.</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>SequenceDf <span class="ot">&lt;-</span> IRIs[,<span class="fu">c</span>(<span class="dv">3</span>,<span class="dv">11</span>,<span class="dv">9</span>)] <span class="do">## Se guarda la secuencia de aa con el identificador de cada proteína.</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>SequenceDf<span class="sc">$</span>Entry <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;http://esd.bioinf.org/sequence/&quot;</span>, SequenceDf<span class="sc">$</span>Entry)</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>IRIs<span class="sc">$</span>Sequence <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;http://esd.bioinf.org/sequence/&quot;</span>, IRIs<span class="sc">$</span>Entry)</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>IRIs<span class="sc">$</span>Involvement.in.disease <span class="ot">&lt;-</span> <span class="fu">sapply</span>(IRIs<span class="sc">$</span>Involvement.in.disease, <span class="cf">function</span>(x) {</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.na</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">nchar</span>(x) <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>    <span class="fu">return</span>(<span class="fu">paste0</span>(<span class="st">&quot;http://purl.uniprot.org/mim/&quot;</span>, <span class="fu">strsplit</span>(x, <span class="st">&quot; &quot;</span>)[[<span class="dv">1</span>]]))</span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>    <span class="fu">return</span>(x)  <span class="do">## Mantener el valor original si la celda está vacía</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>  }</span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>}, <span class="at">USE.NAMES =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="do">## Crear IRIs para la columna Entry (Uniprot)</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>IRIs<span class="sc">$</span>Entry <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;https://www.uniprot.org/uniprotkb/&quot;</span>, IRIs<span class="sc">$</span>Entry,<span class="st">&quot;/entry&quot;</span>)</span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="do">## Crear IRIs para la columna Interacts with:</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>IRIs<span class="sc">$</span>Interacts.with <span class="ot">&lt;-</span> <span class="fu">sapply</span>(IRIs<span class="sc">$</span>Interacts.with, <span class="cf">function</span>(x) {</span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.na</span>(x)) {</span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">&quot;http://esd.bioinf.org/protein/&quot;</span>, <span class="fu">unlist</span>(<span class="fu">strsplit</span>(x, <span class="st">&quot; &quot;</span>)))</span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a>    <span class="cn">NA</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a>  }</span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a>}, <span class="at">USE.NAMES =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="do">## Crear IRIs para las columnas de la GO: </span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a>IRIs<span class="sc">$</span>Gene.Ontology..biological.process. <span class="ot">&lt;-</span> <span class="fu">sapply</span>(IRIs<span class="sc">$</span>Gene.Ontology..biological.process., <span class="cf">function</span>(x) {</span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.na</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">nchar</span>(x) <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a>    <span class="fu">return</span>(<span class="fu">paste0</span>(<span class="st">&quot;http://purl.obolibrary.org/obo/GO_&quot;</span>, <span class="fu">strsplit</span>(x, <span class="st">&quot; &quot;</span>)[[<span class="dv">1</span>]]))</span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a>    <span class="fu">return</span>(x)</span>
+<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a>  }</span>
+<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a>}, <span class="at">USE.NAMES =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a></span>
+<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a>IRIs<span class="sc">$</span>Gene.Ontology..molecular.function. <span class="ot">&lt;-</span> <span class="fu">sapply</span>(IRIs<span class="sc">$</span>Gene.Ontology..molecular.function., <span class="cf">function</span>(x) {</span>
+<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.na</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">nchar</span>(x) <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a>    <span class="fu">return</span>(<span class="fu">paste0</span>(<span class="st">&quot;http://purl.obolibrary.org/obo/GO_&quot;</span>, <span class="fu">strsplit</span>(x, <span class="st">&quot; &quot;</span>)[[<span class="dv">1</span>]]))</span>
+<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a>    <span class="fu">return</span>(x)  <span class="do">## Mantener el valor original si la celda está vacía</span></span>
+<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a>  }</span>
+<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a>}, <span class="at">USE.NAMES =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a></span>
+<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a> </span>
+<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a>IRIs<span class="sc">$</span>Gene.Ontology..cellular.component. <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">strsplit</span>(IRIs<span class="sc">$</span>Gene.Ontology..cellular.component., <span class="st">&quot; &quot;</span>), <span class="cf">function</span>(x) <span class="fu">paste0</span>(<span class="st">&quot;http://purl.obolibrary.org/obo/GO_&quot;</span>, x))</span>
+<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a></span>
+<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a><span class="do">## Crear IRIS para alphafold</span></span>
+<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a>IRIs<span class="sc">$</span>AlphaFoldDB <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;https://alphafold.ebi.ac.uk/entry/&quot;</span>, IRIs<span class="sc">$</span>AlphaFoldDB)</span>
+<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a></span>
+<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a></span>
+<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a><span class="do">## Crear IRIs para la columna Ensembl:</span></span>
+<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a>IRIs<span class="sc">$</span>Ensembl <span class="ot">&lt;-</span> <span class="fu">sapply</span>(IRIs<span class="sc">$</span>Ensembl, <span class="cf">function</span>(x) {</span>
+<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.na</span>(x)) {</span>
+<span id="cb5-62"><a href="#cb5-62" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">&quot;http://esd.bioinf.org/ensembl.transcript/&quot;</span>, <span class="fu">unlist</span>(<span class="fu">strsplit</span>(x, <span class="st">&quot; &quot;</span>)))</span>
+<span id="cb5-63"><a href="#cb5-63" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb5-64"><a href="#cb5-64" tabindex="-1"></a>    <span class="cn">NA</span></span>
+<span id="cb5-65"><a href="#cb5-65" tabindex="-1"></a>  }</span>
+<span id="cb5-66"><a href="#cb5-66" tabindex="-1"></a>}, <span class="at">USE.NAMES =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-67"><a href="#cb5-67" tabindex="-1"></a></span>
+<span id="cb5-68"><a href="#cb5-68" tabindex="-1"></a>IRIs<span class="sc">$</span>Sequence <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;http://esd.bioinf.org/sequence/&quot;</span>, IRIs<span class="sc">$</span>Entry)</span>
+<span id="cb5-69"><a href="#cb5-69" tabindex="-1"></a></span>
+<span id="cb5-70"><a href="#cb5-70" tabindex="-1"></a><span class="do">## Crear IRIs para GeneID </span></span>
+<span id="cb5-71"><a href="#cb5-71" tabindex="-1"></a>IRIs<span class="sc">$</span>GeneID <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;https://identifiers.org/ncbigene/&quot;</span>, IRIs<span class="sc">$</span>GeneID)</span>
+<span id="cb5-72"><a href="#cb5-72" tabindex="-1"></a><span class="co">#https://identifiers.org/ncbigene/4728 </span></span></code></pre></div>
+</div>
+<div id="iris-para-las-propiedades" class="section level3">
+<h3>IRIs para las propiedades</h3>
+<p>A continuación se modificarán los nombres de las columnas con el fin
+de obtener la mayor parte de las propiedades (predicados) en formato
+IRI.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">colnames</span>(IRIs) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Proteina&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO_0003302&quot;</span>, <span class="st">&quot;https://schema.org/sameAs&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO_0002434&quot;</span>, <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO_0002511&quot;</span>, <span class="st">&quot;http://semanticscience.org/resource/SIO_010079&quot;</span>, <span class="st">&quot;TieneEstructura3D&quot;</span>, <span class="st">&quot;http://edamontology.org/data_1249&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/NCIT_C165060&quot;</span>, <span class="st">&quot;http://www.bioassayontology.org/bao#BAO_0002818&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/BFO_0000050&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO_0000056&quot;</span>, <span class="st">&quot;http://www.bioassayontology.org/bao#BAO_0003105&quot;</span>, <span class="st">&quot;https://schema.org/dateCreated&quot;</span>, <span class="st">&quot;https://schema.org/dateModified&quot;</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>IRI_col <span class="ot">&lt;-</span> <span class="fu">names</span>(IRIs)</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>Properties <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Nombre =</span> Nombre_col, <span class="at">IRI =</span> IRI_col)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>cnSeq <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Entry&quot;</span>, <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/ICEO_0000290&quot;</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="fu">colnames</span>(SequenceDf) <span class="ot">&lt;-</span> cnSeq</span></code></pre></div>
+</div>
+</div>
+<div id="generación-de-tripletas" class="section level2">
+<h2>Generación de tripletas</h2>
+<p>En este apartado se genera el fichero rdf utilizando las funciones
+<em>rdf()</em>, <em>rdf_add()</em> y <em>rdf_serialize()</em> contenidas
+en el paquete <em>rdflib</em>.</p>
+<p>Comenzaremos generando un objeto rdf al que le añadiremos las
+tripletas en pasos sucesivos:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>rdf <span class="ot">&lt;-</span> <span class="fu">rdf</span>()</span></code></pre></div>
+<p>A continuación se muestra como se añaden las tripletas utilizando una
+serie de bucles sobre los distintos dataframes que se generan, cada uno
+de los cuales automatizará el proceso para cada una de las entidades
+principales.</p>
+<div id="entidad-protein." class="section level3">
+<h3>Entidad Protein.</h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="do">## Eliminamos las columnas que no serán parte de las tripletas con el sujeto &quot;Proteina&quot; (&quot;Ensembl&quot;, &quot;Gene.Names&quot; , Alphafold&quot; y &quot;Length&quot;)</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>ProteinDf <span class="ot">&lt;-</span> IRIs[,<span class="sc">-</span><span class="fu">c</span>(<span class="dv">5</span>,<span class="dv">6</span>,<span class="dv">8</span>,<span class="dv">9</span>)]</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>ProteinDfnames <span class="ot">&lt;-</span> <span class="fu">names</span>(PD_df[,<span class="sc">-</span><span class="fu">c</span>(<span class="dv">5</span>,<span class="dv">6</span>,<span class="dv">8</span>,<span class="dv">9</span>)])</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="fu">colnames</span>(ProteinDf) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Proteina&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO_0003302&quot;</span>, <span class="st">&quot;https://schema.org/sameAs&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO_0002434&quot;</span>, <span class="st">&quot;http://semanticscience.org/resource/SIO_010079&quot;</span>, <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span>, <span class="st">&quot;http://www.bioassayontology.org/bao#BAO_0002818&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/BFO_0000050&quot;</span>, <span class="st">&quot;http://purl.obolibrary.org/obo/RO_0000056&quot;</span>, <span class="st">&quot;http://www.bioassayontology.org/bao#BAO_0003105&quot;</span>, <span class="st">&quot;https://schema.org/dateCreated&quot;</span>, <span class="st">&quot;https://schema.org/dateModified&quot;</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="do">## Añadimos columna Type.Protein para clasificar nuestra instancia.</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>ProteinDf<span class="sc">$</span><span class="st">&#39;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&#39;</span> <span class="ot">&lt;-</span> <span class="st">&quot;http://purl.obolibrary.org/obo/OGI.owl#Protein&quot;</span></span></code></pre></div>
+<p>Debido a que para esta entidad existen principalmente 2 tipos de
+datos, se va a dividir el proceso en 2 bucles, uno que creará tripletas
+en las que para cada sujeto solo existe un posible objeto y otro que lo
+hará cuando exista la posibilidad de que una tripleta pueda contener
+relaciones entre 1 sujeto y más de 1 objeto.</p>
+<div id="elemento-por-celda" class="section level4">
+<h4>1 elemento por celda</h4>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="do">## Seleccionamos aquellas columnas que solo presentan un elemento.</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>ProteinDf1 <span class="ot">&lt;-</span> ProteinDf[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">5</span>,<span class="dv">6</span>,<span class="dv">7</span>,<span class="dv">11</span>,<span class="dv">12</span>,<span class="dv">13</span>)]</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#rdfObject &lt;- rdf()</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>num_filas <span class="ot">&lt;-</span> <span class="fu">nrow</span>(ProteinDf1)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>num_columnas <span class="ot">&lt;-</span> <span class="fu">ncol</span>(ProteinDf1)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>num_filas) {</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>  <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>num_columnas) {</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> ProteinDf1[i, <span class="dv">1</span>]  </span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="fu">names</span>(ProteinDf1)[j]  </span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>    object <span class="ot">&lt;-</span> ProteinDf1[i, j]</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>    rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, subject, predicate, object)</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>    }</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>  }</span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 469 triples, stored in hashes
+## -------------------------------
+## &lt;http://esd.bioinf.org/protein/O43464&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/27429&gt; .
+## &lt;http://esd.bioinf.org/protein/P21554&gt; &lt;https://schema.org/dateModified&gt; &quot;2023-11-08&quot; .
+## &lt;http://esd.bioinf.org/protein/P17568&gt; &lt;https://schema.org/dateModified&gt; &quot;2023-11-08&quot; .
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://www.bioassayontology.org/bao#BAO_0002818&gt; &lt;http://esd.bioinf.org/sequence/https://www.uniprot.org/uniprotkb/P56556/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/P03897&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/P03897/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/4700&gt; .
+## &lt;http://esd.bioinf.org/protein/P17568&gt; &lt;https://schema.org/dateCreated&gt; &quot;1990-08-01&quot; .
+## &lt;http://esd.bioinf.org/protein/P07101&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/P07101/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/O95299&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O95299/entry&gt; .
+## 
+## ... with 459 more triples</code></pre>
+</div>
+<div id="varios-elementos-por-celda-filas" class="section level4">
+<h4>Varios elementos por celda (Filas: )</h4>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>ProteinDf2 <span class="ot">&lt;-</span> ProteinDf[,<span class="sc">-</span><span class="fu">c</span>(<span class="dv">3</span>,<span class="dv">5</span>,<span class="dv">6</span>,<span class="dv">7</span>,<span class="dv">11</span>,<span class="dv">12</span>,<span class="dv">13</span>)]</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>ProteinDf2<span class="sc">$</span><span class="st">`</span><span class="at">http://purl.obolibrary.org/obo/RO_0002434</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="fu">as.list</span>(ProteinDf2<span class="sc">$</span><span class="st">`</span><span class="at">http://purl.obolibrary.org/obo/RO_0002434</span><span class="st">`</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>num_columnas2 <span class="ot">=</span> <span class="fu">ncol</span>(ProteinDf2)</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>num_filas2 <span class="ot">=</span> <span class="fu">nrow</span>(ProteinDf2)</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>num_filas2) {</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>  <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>num_columnas2) {</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> ProteinDf2[i, <span class="dv">1</span>][[<span class="dv">1</span>]]</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="fu">names</span>(ProteinDf2)[j]</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>    object <span class="ot">&lt;-</span> ProteinDf2[i, j][[<span class="dv">1</span>]]</span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>    elementos <span class="ot">&lt;-</span> <span class="fu">unlist</span>(object)</span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>    num_el <span class="ot">&lt;-</span> <span class="fu">length</span>(elementos)</span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a>    <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>num_el) {</span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a>    <span class="fu">rdf_add</span>(rdf, subject, predicate, elementos[k])  </span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>    }</span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a>  }</span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a>}</span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 3534 triples, stored in hashes
+## -------------------------------
+## &lt;http://esd.bioinf.org/protein/O43464&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/27429&gt; .
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://www.bioassayontology.org/bao#BAO_0002818&gt; &lt;http://esd.bioinf.org/sequence/https://www.uniprot.org/uniprotkb/P56556/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/4700&gt; .
+## &lt;http://esd.bioinf.org/protein/P03897&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/P03897/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_1901006&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006814&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0042776&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0032981&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006120&gt; .
+## 
+## ... with 3524 more triples</code></pre>
+</div>
+</div>
+<div id="entidad-gene" class="section level3">
+<h3>Entidad Gene</h3>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>GeneDf <span class="ot">&lt;-</span> IRIs[,<span class="fu">c</span>(<span class="dv">7</span>,<span class="dv">5</span>,<span class="dv">6</span>)]</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>GeneCol <span class="ot">&lt;-</span> <span class="fu">colnames</span>(GeneDf)</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>GeneCol[<span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="st">&quot;Gene&quot;</span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="fu">colnames</span>(GeneDf) <span class="ot">&lt;-</span> GeneCol</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="do">## Añadimos la columna con el tipo Gene.</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>GeneDf<span class="sc">$</span><span class="st">&#39;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&#39;</span> <span class="ot">&lt;-</span> <span class="st">&quot;http://semanticscience.org/resource/SIO_010035&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>num_filas <span class="ot">&lt;-</span> <span class="fu">nrow</span>(GeneDf)</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>num_columnas <span class="ot">&lt;-</span> <span class="fu">ncol</span>(GeneDf)</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>num_filas) {</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>  <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span><span class="dv">2</span>) {</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> GeneDf[i, <span class="dv">1</span>][[<span class="dv">1</span>]]</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="fu">names</span>(GeneDf)[j]</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>    object <span class="ot">&lt;-</span> GeneDf[i, j][[<span class="dv">1</span>]]</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>    elementos <span class="ot">&lt;-</span> <span class="fu">unlist</span>(object)</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>    num_el <span class="ot">&lt;-</span> <span class="fu">length</span>(elementos)</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>    <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>num_el) {</span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>      <span class="fu">rdf_add</span>(rdf, subject, predicate, elementos[k])  </span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>    }</span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a>  }</span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a>}</span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a></span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 3673 triples, stored in hashes
+## -------------------------------
+## &lt;http://esd.bioinf.org/protein/O43464&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/27429&gt; .
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://www.bioassayontology.org/bao#BAO_0002818&gt; &lt;http://esd.bioinf.org/sequence/https://www.uniprot.org/uniprotkb/P56556/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/4700&gt; .
+## &lt;http://esd.bioinf.org/protein/P03897&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/P03897/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_1901006&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006814&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0042776&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0032981&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006120&gt; .
+## 
+## ... with 3663 more triples</code></pre>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="do">## Etiquetamos la clase Gene.</span></span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, <span class="at">subject =</span> <span class="st">&quot;http://semanticscience.org/resource/SIO_010035&quot;</span>, <span class="at">predicate =</span> <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span> , <span class="at">object =</span> <span class="st">&quot;Gene&quot;</span>)</span></code></pre></div>
+</div>
+<div id="entidad-sequence" class="section level3">
+<h3>Entidad Sequence</h3>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="do">## Añadimos la columna con el tipo Peptide al dataframe SequenceDf.</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>SequenceDf<span class="sc">$</span><span class="st">&#39;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&#39;</span> <span class="ot">&lt;-</span> <span class="st">&quot;http://purl.obolibrary.org/obo/OGI_0000025&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="co">#rdf &lt;- rdf()</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>num_filas <span class="ot">&lt;-</span> <span class="fu">nrow</span>(SequenceDf)</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>num_columnas <span class="ot">&lt;-</span> <span class="fu">ncol</span>(SequenceDf)</span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>num_filas) {</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>  <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>num_columnas) {</span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> SequenceDf[i, <span class="dv">1</span>]  </span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="fu">names</span>(SequenceDf)[j]  </span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>    object <span class="ot">&lt;-</span> SequenceDf[i, j]</span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a>    rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, subject, predicate, object)</span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>    }</span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a>  }</span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a><span class="do">## Etiquetamos la clase Peptide sequence</span></span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a>rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, <span class="at">subject =</span> <span class="st">&quot;http://purl.obolibrary.org/obo/OGI_0000025&quot;</span>, <span class="at">predicate =</span> <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span> , <span class="at">object =</span> <span class="st">&quot;Peptide sequence&quot;</span>)</span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a></span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 3876 triples, stored in hashes
+## -------------------------------
+## &lt;http://esd.bioinf.org/protein/O43464&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/27429&gt; .
+## &lt;http://esd.bioinf.org/sequence/O75489&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/OGI_0000025&gt; .
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://www.bioassayontology.org/bao#BAO_0002818&gt; &lt;http://esd.bioinf.org/sequence/https://www.uniprot.org/uniprotkb/P56556/entry&gt; .
+## &lt;http://esd.bioinf.org/sequence/Q9NPL8&gt; &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; &quot;MEVPPPAPRSFLCRALCLFPRVFAAEAVTADSEVLEERQKRLPYVPEPYYPESGWDRLRELFGKDEQQRISKDLANICKTAATAGIIGWVYGGIPAFIHAKQQYIEQSQAEIYHNRFDAVQSAHRAATRGFIRYGWRWGWRTAVFVTIFNTVNTSLNVYRNKDALSHFVIAGAVTGSLFRINVGLRGLVAGGIIGALLGTPVGGLLMAFQKYSGETVQERKQKDRKALHELKLEEWKGRLQVTEHLPEKIESSLQEDEPENDAKKIEALLNLPRNPSVIDKQDKD&quot; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/4700&gt; .
+## &lt;http://esd.bioinf.org/protein/P03897&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/P03897/entry&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_1901006&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006814&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0042776&gt; .
+## 
+## ... with 3866 more triples</code></pre>
+</div>
+<div id="clases-restantes" class="section level3">
+<h3>Clases restantes</h3>
+<div id="clasificamos-como-proteínas-aquellas-que-participaban-en-la-relación-interacts.with-como-objeto." class="section level4">
+<h4>Clasificamos como proteínas aquellas que participaban en la relación
+Interacts.With como objeto.</h4>
+<p>Podremos difernciarlas de las 67 que añadimos en el apartado
+<em>Entidad Protein</em> ya que no se les va a añadir ninguna etiqueta
+con su nombre completo.</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="do">## Obtenemos todas las proteínas independientemente de con quién interactuaran y eliminamos las filas que no tenían ninguna.</span></span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>ProtIntDf <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">unlist</span>(ProteinDf2<span class="sc">$</span><span class="st">`</span><span class="at">http://purl.obolibrary.org/obo/RO_0002434</span><span class="st">`</span>))</span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a><span class="fu">colnames</span>(ProtIntDf) <span class="ot">&lt;-</span> <span class="st">&quot;Proteina&quot;</span></span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>ProtIntDf <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(ProtIntDf)</span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a></span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a><span class="do">## Seleccionamos aquellas que no hayamos clasificado anteriormente para evitar tripletas redundantes.</span></span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>ProtIntFinal <span class="ot">&lt;-</span> <span class="fu">anti_join</span>(ProtIntDf, ProteinDf2)</span></code></pre></div>
+<pre><code>## Joining with `by = join_by(Proteina)`</code></pre>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a>ProtIntFinal <span class="ot">&lt;-</span> <span class="fu">unique</span>(ProtIntFinal)</span>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(ProtIntFinal)) {</span>
+<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> ProtIntFinal[i,<span class="dv">1</span>]  </span>
+<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="st">&quot;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&quot;</span>  </span>
+<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a>    object <span class="ot">&lt;-</span> <span class="st">&quot;http://purl.obolibrary.org/obo/OGI.owl#Protein&quot;</span></span>
+<span id="cb22-7"><a href="#cb22-7" tabindex="-1"></a>    rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, subject, predicate, object)</span>
+<span id="cb22-8"><a href="#cb22-8" tabindex="-1"></a>    }</span>
+<span id="cb22-9"><a href="#cb22-9" tabindex="-1"></a></span>
+<span id="cb22-10"><a href="#cb22-10" tabindex="-1"></a><span class="do">## Etiquetamos la clase Protein.</span></span>
+<span id="cb22-11"><a href="#cb22-11" tabindex="-1"></a>rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, <span class="at">subject =</span> <span class="st">&quot;http://purl.obolibrary.org/obo/OGI.owl#Protein&quot;</span>, <span class="at">predicate =</span> <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span> , <span class="at">object =</span> <span class="st">&quot;Protein&quot;</span>)</span>
+<span id="cb22-12"><a href="#cb22-12" tabindex="-1"></a></span>
+<span id="cb22-13"><a href="#cb22-13" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 4704 triples, stored in hashes
+## -------------------------------
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://esd.bioinf.org/sequence/O75489&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/OGI_0000025&gt; .
+## &lt;http://esd.bioinf.org/sequence/Q9NPL8&gt; &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; &quot;MEVPPPAPRSFLCRALCLFPRVFAAEAVTADSEVLEERQKRLPYVPEPYYPESGWDRLRELFGKDEQQRISKDLANICKTAATAGIIGWVYGGIPAFIHAKQQYIEQSQAEIYHNRFDAVQSAHRAATRGFIRYGWRWGWRTAVFVTIFNTVNTSLNVYRNKDALSHFVIAGAVTGSLFRINVGLRGLVAGGIIGALLGTPVGGLLMAFQKYSGETVQERKQKDRKALHELKLEEWKGRLQVTEHLPEKIESSLQEDEPENDAKKIEALLNLPRNPSVIDKQDKD&quot; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/4700&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_1901006&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006814&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0042776&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0032981&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006120&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0007623&gt; .
+## 
+## ... with 4694 more triples</code></pre>
+</div>
+<div id="clasificamos-como-disease-las-entidades-contenidas-en-la-columna-involvement.in.disease." class="section level4">
+<h4>Clasificamos como Disease las entidades contenidas en la columna
+Involvement.In.Disease.</h4>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="do">## Seleccionamos todas las enfermedades distintas y eliminamos los valores faltantes.</span></span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a>MIMs <span class="ot">&lt;-</span> IRIs<span class="sc">$</span><span class="st">`</span><span class="at">http://purl.obolibrary.org/obo/RO_0003302</span><span class="st">`</span></span>
+<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a>listaMIM <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">unlist</span>(MIMs))</span>
+<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a>listaMIM <span class="ot">&lt;-</span> <span class="fu">Filter</span>(<span class="cf">function</span>(x) x <span class="sc">!=</span> <span class="st">&quot;&quot;</span>, listaMIM)</span>
+<span id="cb24-5"><a href="#cb24-5" tabindex="-1"></a>MIMDf <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(listaMIM)</span>
+<span id="cb24-6"><a href="#cb24-6" tabindex="-1"></a></span>
+<span id="cb24-7"><a href="#cb24-7" tabindex="-1"></a>MIMDf<span class="sc">$</span><span class="st">&#39;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&#39;</span> <span class="ot">&lt;-</span> <span class="st">&quot;http://purl.obolibrary.org/obo/OGMS_0000031&quot;</span></span>
+<span id="cb24-8"><a href="#cb24-8" tabindex="-1"></a></span>
+<span id="cb24-9"><a href="#cb24-9" tabindex="-1"></a></span>
+<span id="cb24-10"><a href="#cb24-10" tabindex="-1"></a><span class="co">#rdfDis &lt;- rdf()</span></span>
+<span id="cb24-11"><a href="#cb24-11" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(MIMDf)) {</span>
+<span id="cb24-12"><a href="#cb24-12" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> MIMDf[i,<span class="dv">1</span>]  </span>
+<span id="cb24-13"><a href="#cb24-13" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="st">&quot;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&quot;</span></span>
+<span id="cb24-14"><a href="#cb24-14" tabindex="-1"></a>    object <span class="ot">&lt;-</span> <span class="st">&quot;http://purl.obolibrary.org/obo/OGMS_0000031&quot;</span></span>
+<span id="cb24-15"><a href="#cb24-15" tabindex="-1"></a>    rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, subject, predicate, object)</span>
+<span id="cb24-16"><a href="#cb24-16" tabindex="-1"></a>    }</span>
+<span id="cb24-17"><a href="#cb24-17" tabindex="-1"></a></span>
+<span id="cb24-18"><a href="#cb24-18" tabindex="-1"></a>rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, <span class="at">subject =</span> <span class="st">&quot;http://purl.obolibrary.org/obo/OGMS_0000031&quot;</span>, <span class="at">predicate =</span> <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span> , <span class="at">object =</span> <span class="st">&quot;Disease&quot;</span>)</span>
+<span id="cb24-19"><a href="#cb24-19" tabindex="-1"></a></span>
+<span id="cb24-20"><a href="#cb24-20" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 4796 triples, stored in hashes
+## -------------------------------
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://esd.bioinf.org/sequence/O75489&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/OGI_0000025&gt; .
+## &lt;http://esd.bioinf.org/sequence/Q9NPL8&gt; &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; &quot;MEVPPPAPRSFLCRALCLFPRVFAAEAVTADSEVLEERQKRLPYVPEPYYPESGWDRLRELFGKDEQQRISKDLANICKTAATAGIIGWVYGGIPAFIHAKQQYIEQSQAEIYHNRFDAVQSAHRAATRGFIRYGWRWGWRTAVFVTIFNTVNTSLNVYRNKDALSHFVIAGAVTGSLFRINVGLRGLVAGGIIGALLGTPVGGLLMAFQKYSGETVQERKQKDRKALHELKLEEWKGRLQVTEHLPEKIESSLQEDEPENDAKKIEALLNLPRNPSVIDKQDKD&quot; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/4700&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_1901006&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006814&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0042776&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0032981&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006120&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0007623&gt; .
+## 
+## ... with 4786 more triples</code></pre>
+<div id="añadimos-una-descripción-de-la-enfermedad-como-label" class="section level5">
+<h5>Añadimos una descripción de la enfermedad como label:</h5>
+<p>En este caso el etiquetado se realizará mediante una consulta a OMIM
+utilizando el paquete <em>rentrez</em>, mediante la cual obtendremos la
+descripción de cada una de las enfermedades.</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="do">## Obtenemos los códigos únicos para todas las enfermedades.</span></span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a>MIMdiseasesUnique <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">unlist</span>(<span class="fu">strsplit</span>(PD_df<span class="sc">$</span>Involvement.in.disease, <span class="st">&quot; &quot;</span>)))</span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a></span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a><span class="do">## Realizamos la consulta y almacenamos el resultado en un dataframe.</span></span>
+<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a>Disease_summ <span class="ot">&lt;-</span> <span class="fu">entrez_summary</span>(<span class="at">db=</span><span class="st">&quot;omim&quot;</span>, <span class="at">id=</span>MIMdiseasesUnique)</span></code></pre></div>
+<pre><code>## Warning: Esummary includes error message: Invalid uid NA at position= 377</code></pre>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a>ID_and_Disease <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">t</span>(<span class="fu">extract_from_esummary</span>(Disease_summ, <span class="fu">c</span>(<span class="st">&quot;uid&quot;</span>,<span class="st">&quot;title&quot;</span>))), <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a></span>
+<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a><span class="do">## Formateamos nuestras IRIS y añadimos las tripletas con las etiquetas.</span></span>
+<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a>ID_and_Disease<span class="sc">$</span>uid <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;http://purl.uniprot.org/mim/&quot;</span>, ID_and_Disease<span class="sc">$</span>uid)</span>
+<span id="cb28-5"><a href="#cb28-5" tabindex="-1"></a></span>
+<span id="cb28-6"><a href="#cb28-6" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(ID_and_Disease)) {</span>
+<span id="cb28-7"><a href="#cb28-7" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> ID_and_Disease[i,<span class="dv">1</span>]  </span>
+<span id="cb28-8"><a href="#cb28-8" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span>  </span>
+<span id="cb28-9"><a href="#cb28-9" tabindex="-1"></a>    object <span class="ot">&lt;-</span> ID_and_Disease[i,<span class="dv">2</span>]</span>
+<span id="cb28-10"><a href="#cb28-10" tabindex="-1"></a>    rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, subject, predicate, object)</span>
+<span id="cb28-11"><a href="#cb28-11" tabindex="-1"></a>    }</span>
+<span id="cb28-12"><a href="#cb28-12" tabindex="-1"></a></span>
+<span id="cb28-13"><a href="#cb28-13" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 4887 triples, stored in hashes
+## -------------------------------
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://esd.bioinf.org/sequence/O75489&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/OGI_0000025&gt; .
+## &lt;http://esd.bioinf.org/sequence/Q9NPL8&gt; &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; &quot;MEVPPPAPRSFLCRALCLFPRVFAAEAVTADSEVLEERQKRLPYVPEPYYPESGWDRLRELFGKDEQQRISKDLANICKTAATAGIIGWVYGGIPAFIHAKQQYIEQSQAEIYHNRFDAVQSAHRAATRGFIRYGWRWGWRTAVFVTIFNTVNTSLNVYRNKDALSHFVIAGAVTGSLFRINVGLRGLVAGGIIGALLGTPVGGLLMAFQKYSGETVQERKQKDRKALHELKLEEWKGRLQVTEHLPEKIESSLQEDEPENDAKKIEALLNLPRNPSVIDKQDKD&quot; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/4700&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_1901006&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006814&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0042776&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0032981&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006120&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0007623&gt; .
+## 
+## ... with 4877 more triples</code></pre>
+</div>
+</div>
+<div id="gene-ontology" class="section level4">
+<h4>Gene Ontology</h4>
+<p>Para los datos procedentes de Gene Ontology se va a realizar un paso
+de clasificación de cada instancia, el etiquetado de las clases y
+posteriormente el etiquetado de las instancias.</p>
+<div id="clasificación." class="section level5">
+<h5>Clasificación.</h5>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a>CellCompDf <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">unlist</span>(ProteinDf2<span class="sc">$</span><span class="st">`</span><span class="at">http://purl.obolibrary.org/obo/BFO_0000050</span><span class="st">`</span>))</span>
+<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a>CellCompDf <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(CellCompDf)</span>
+<span id="cb30-3"><a href="#cb30-3" tabindex="-1"></a></span>
+<span id="cb30-4"><a href="#cb30-4" tabindex="-1"></a>CellCompDfUniq <span class="ot">&lt;-</span> <span class="fu">unique</span>(CellCompDf)</span>
+<span id="cb30-5"><a href="#cb30-5" tabindex="-1"></a></span>
+<span id="cb30-6"><a href="#cb30-6" tabindex="-1"></a><span class="co">#rdfCC &lt;- rdf()</span></span>
+<span id="cb30-7"><a href="#cb30-7" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(CellCompDfUniq)) {</span>
+<span id="cb30-8"><a href="#cb30-8" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> CellCompDfUniq[i,<span class="dv">1</span>]  </span>
+<span id="cb30-9"><a href="#cb30-9" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="st">&quot;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&quot;</span></span>
+<span id="cb30-10"><a href="#cb30-10" tabindex="-1"></a>    object <span class="ot">&lt;-</span> <span class="st">&quot;http://purl.obolibrary.org/obo/GO_0005575&quot;</span></span>
+<span id="cb30-11"><a href="#cb30-11" tabindex="-1"></a>    rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, subject, predicate, object)</span>
+<span id="cb30-12"><a href="#cb30-12" tabindex="-1"></a>    }</span>
+<span id="cb30-13"><a href="#cb30-13" tabindex="-1"></a></span>
+<span id="cb30-14"><a href="#cb30-14" tabindex="-1"></a>rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, <span class="at">subject =</span> <span class="st">&quot;http://purl.obolibrary.org/obo/GO_0005575&quot;</span>, <span class="at">predicate =</span> <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span> , <span class="at">object =</span> <span class="st">&quot;Cellular Component&quot;</span>)</span>
+<span id="cb30-15"><a href="#cb30-15" tabindex="-1"></a></span>
+<span id="cb30-16"><a href="#cb30-16" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 5021 triples, stored in hashes
+## -------------------------------
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://esd.bioinf.org/sequence/O75489&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/OGI_0000025&gt; .
+## &lt;http://esd.bioinf.org/sequence/Q9NPL8&gt; &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; &quot;MEVPPPAPRSFLCRALCLFPRVFAAEAVTADSEVLEERQKRLPYVPEPYYPESGWDRLRELFGKDEQQRISKDLANICKTAATAGIIGWVYGGIPAFIHAKQQYIEQSQAEIYHNRFDAVQSAHRAATRGFIRYGWRWGWRTAVFVTIFNTVNTSLNVYRNKDALSHFVIAGAVTGSLFRINVGLRGLVAGGIIGALLGTPVGGLLMAFQKYSGETVQERKQKDRKALHELKLEEWKGRLQVTEHLPEKIESSLQEDEPENDAKKIEALLNLPRNPSVIDKQDKD&quot; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/4700&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_1901006&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006814&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0042776&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0032981&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006120&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0007623&gt; .
+## 
+## ... with 5011 more triples</code></pre>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a>BioProcessDf <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">unlist</span>(ProteinDf2<span class="sc">$</span><span class="st">`</span><span class="at">http://purl.obolibrary.org/obo/RO_0000056</span><span class="st">`</span>))</span>
+<span id="cb32-2"><a href="#cb32-2" tabindex="-1"></a>BioProcessDf <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(BioProcessDf)</span>
+<span id="cb32-3"><a href="#cb32-3" tabindex="-1"></a></span>
+<span id="cb32-4"><a href="#cb32-4" tabindex="-1"></a>BioProcessDfUniq <span class="ot">&lt;-</span> <span class="fu">unique</span>(BioProcessDf)</span>
+<span id="cb32-5"><a href="#cb32-5" tabindex="-1"></a></span>
+<span id="cb32-6"><a href="#cb32-6" tabindex="-1"></a><span class="co">#rdfBP &lt;- rdf()</span></span>
+<span id="cb32-7"><a href="#cb32-7" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(BioProcessDfUniq)) {</span>
+<span id="cb32-8"><a href="#cb32-8" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> BioProcessDfUniq[i,<span class="dv">1</span>]  </span>
+<span id="cb32-9"><a href="#cb32-9" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="st">&quot;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&quot;</span></span>
+<span id="cb32-10"><a href="#cb32-10" tabindex="-1"></a>    object <span class="ot">&lt;-</span> <span class="st">&quot;http://purl.obolibrary.org/obo/GO_0008150&quot;</span></span>
+<span id="cb32-11"><a href="#cb32-11" tabindex="-1"></a>    rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, subject, predicate, object)</span>
+<span id="cb32-12"><a href="#cb32-12" tabindex="-1"></a>    }</span>
+<span id="cb32-13"><a href="#cb32-13" tabindex="-1"></a></span>
+<span id="cb32-14"><a href="#cb32-14" tabindex="-1"></a>rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, <span class="at">subject =</span> <span class="st">&quot;http://purl.obolibrary.org/obo/GO_0008150&quot;</span>, <span class="at">predicate =</span> <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span> , <span class="at">object =</span> <span class="st">&quot;Biological Process&quot;</span>)</span>
+<span id="cb32-15"><a href="#cb32-15" tabindex="-1"></a></span>
+<span id="cb32-16"><a href="#cb32-16" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 5738 triples, stored in hashes
+## -------------------------------
+## &lt;http://purl.obolibrary.org/obo/GO_0033076&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/GO_0008150&gt; .
+## &lt;http://purl.obolibrary.org/obo/GO_1905448&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/GO_0008150&gt; .
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://esd.bioinf.org/sequence/O75489&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/OGI_0000025&gt; .
+## &lt;http://esd.bioinf.org/sequence/Q9NPL8&gt; &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; &quot;MEVPPPAPRSFLCRALCLFPRVFAAEAVTADSEVLEERQKRLPYVPEPYYPESGWDRLRELFGKDEQQRISKDLANICKTAATAGIIGWVYGGIPAFIHAKQQYIEQSQAEIYHNRFDAVQSAHRAATRGFIRYGWRWGWRTAVFVTIFNTVNTSLNVYRNKDALSHFVIAGAVTGSLFRINVGLRGLVAGGIIGALLGTPVGGLLMAFQKYSGETVQERKQKDRKALHELKLEEWKGRLQVTEHLPEKIESSLQEDEPENDAKKIEALLNLPRNPSVIDKQDKD&quot; .
+## &lt;http://purl.obolibrary.org/obo/GO_0016079&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/GO_0008150&gt; .
+## &lt;http://purl.obolibrary.org/obo/GO_0033077&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/GO_0008150&gt; .
+## &lt;http://esd.bioinf.org/protein/P56556&gt; &lt;http://semanticscience.org/resource/SIO_010079&gt; &lt;https://identifiers.org/ncbigene/4700&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_1901006&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006814&gt; .
+## 
+## ... with 5728 more triples</code></pre>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a>MolFunDf <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">unlist</span>(ProteinDf2<span class="sc">$</span><span class="st">`</span><span class="at">http://www.bioassayontology.org/bao#BAO_0003105</span><span class="st">`</span>))</span>
+<span id="cb34-2"><a href="#cb34-2" tabindex="-1"></a>MolFunDf <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(MolFunDf)</span>
+<span id="cb34-3"><a href="#cb34-3" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" tabindex="-1"></a>MolFunDfUniq <span class="ot">&lt;-</span> <span class="fu">unique</span>(MolFunDf)</span>
+<span id="cb34-5"><a href="#cb34-5" tabindex="-1"></a></span>
+<span id="cb34-6"><a href="#cb34-6" tabindex="-1"></a><span class="co">#rdfMF &lt;- rdf()</span></span>
+<span id="cb34-7"><a href="#cb34-7" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(MolFunDfUniq)) {</span>
+<span id="cb34-8"><a href="#cb34-8" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> MolFunDfUniq[i,<span class="dv">1</span>]  </span>
+<span id="cb34-9"><a href="#cb34-9" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="st">&quot;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&quot;</span>  </span>
+<span id="cb34-10"><a href="#cb34-10" tabindex="-1"></a>    object <span class="ot">&lt;-</span> <span class="st">&quot;http://purl.obolibrary.org/obo/GO_0003674&quot;</span></span>
+<span id="cb34-11"><a href="#cb34-11" tabindex="-1"></a>    rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, subject, predicate, object)</span>
+<span id="cb34-12"><a href="#cb34-12" tabindex="-1"></a>    }</span>
+<span id="cb34-13"><a href="#cb34-13" tabindex="-1"></a></span>
+<span id="cb34-14"><a href="#cb34-14" tabindex="-1"></a>rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, <span class="at">subject =</span> <span class="st">&quot;http://purl.obolibrary.org/obo/GO_0003674&quot;</span>, <span class="at">predicate =</span> <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span> , <span class="at">object =</span> <span class="st">&quot;Molecular Function&quot;</span>)</span>
+<span id="cb34-15"><a href="#cb34-15" tabindex="-1"></a></span>
+<span id="cb34-16"><a href="#cb34-16" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 5932 triples, stored in hashes
+## -------------------------------
+## &lt;http://purl.obolibrary.org/obo/GO_0031748&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/GO_0003674&gt; .
+## &lt;http://esd.bioinf.org/sequence/O75489&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/OGI_0000025&gt; .
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://purl.obolibrary.org/obo/GO_0033077&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/GO_0008150&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_1901006&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006814&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0042776&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0032981&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006120&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0007623&gt; .
+## 
+## ... with 5922 more triples</code></pre>
+</div>
+<div id="etiquetado-gene-ontology" class="section level5">
+<h5>Etiquetado Gene Ontology</h5>
+<p>Para el etiquetado de cada una de las instancias de la Gene Ontology
+se va a utilizar el paquete <em>ontologyIndex</em>, no obstante, algunos
+de los elementos de Gene Ontology presentes en nuestros datos no
+presentan su correspondiente descripción en este paquete, por lo que no
+será posible etiquetarlos aunque mantengamos su IRI.</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" tabindex="-1"></a>GOlist <span class="ot">&lt;-</span> <span class="fu">c</span>(PD_df<span class="sc">$</span>Gene.Ontology..cellular.component., PD_df<span class="sc">$</span>Gene.Ontology..biological.process., PD_df<span class="sc">$</span>Gene.Ontology..molecular.function.)</span>
+<span id="cb36-2"><a href="#cb36-2" tabindex="-1"></a>GOUnique <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">unlist</span>(<span class="fu">strsplit</span>(GOlist, <span class="st">&quot; &quot;</span>)))</span>
+<span id="cb36-3"><a href="#cb36-3" tabindex="-1"></a>GOUnique <span class="ot">&lt;-</span> GOUnique[<span class="sc">!</span><span class="fu">is.na</span>(GOUnique)]</span>
+<span id="cb36-4"><a href="#cb36-4" tabindex="-1"></a></span>
+<span id="cb36-5"><a href="#cb36-5" tabindex="-1"></a><span class="do">## Preparamos el formato para comparar con go.</span></span>
+<span id="cb36-6"><a href="#cb36-6" tabindex="-1"></a>GOlistForm <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;GO:&quot;</span>, GOUnique)</span>
+<span id="cb36-7"><a href="#cb36-7" tabindex="-1"></a></span>
+<span id="cb36-8"><a href="#cb36-8" tabindex="-1"></a><span class="do">## Cargamos los datos de GO procedentes de ontologyIndex</span></span>
+<span id="cb36-9"><a href="#cb36-9" tabindex="-1"></a><span class="fu">data</span>(go)</span>
+<span id="cb36-10"><a href="#cb36-10" tabindex="-1"></a></span>
+<span id="cb36-11"><a href="#cb36-11" tabindex="-1"></a><span class="do">## Obtenemos las etiquetas específicas para nuestra lista de GO.</span></span>
+<span id="cb36-12"><a href="#cb36-12" tabindex="-1"></a>GOlabels <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">GOnum =</span> GOUnique, <span class="at">GOcode =</span> go<span class="sc">$</span>id[GOlistForm], <span class="at">GOdescription =</span> go<span class="sc">$</span>name[GOlistForm])</span>
+<span id="cb36-13"><a href="#cb36-13" tabindex="-1"></a></span>
+<span id="cb36-14"><a href="#cb36-14" tabindex="-1"></a>GOlabels<span class="sc">$</span>GOnum <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">strsplit</span>(GOlabels<span class="sc">$</span>GOnum, <span class="st">&quot; &quot;</span>), <span class="cf">function</span>(x) <span class="fu">paste0</span>(<span class="st">&quot;http://purl.obolibrary.org/obo/GO_&quot;</span>, x))</span>
+<span id="cb36-15"><a href="#cb36-15" tabindex="-1"></a></span>
+<span id="cb36-16"><a href="#cb36-16" tabindex="-1"></a><span class="do">## Eliminamos del df aquellos casos que no presentan descripción.</span></span>
+<span id="cb36-17"><a href="#cb36-17" tabindex="-1"></a>GOlabels <span class="ot">&lt;-</span> GOlabels[<span class="fu">complete.cases</span>(GOlabels<span class="sc">$</span>GOdescription), ]</span>
+<span id="cb36-18"><a href="#cb36-18" tabindex="-1"></a></span>
+<span id="cb36-19"><a href="#cb36-19" tabindex="-1"></a></span>
+<span id="cb36-20"><a href="#cb36-20" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(GOlabels)) {</span>
+<span id="cb36-21"><a href="#cb36-21" tabindex="-1"></a>    subject <span class="ot">&lt;-</span> GOlabels[i,<span class="dv">1</span>]  </span>
+<span id="cb36-22"><a href="#cb36-22" tabindex="-1"></a>    predicate <span class="ot">&lt;-</span> <span class="st">&quot;http://www.w3.org/2000/01/rdf-schema#label&quot;</span>  </span>
+<span id="cb36-23"><a href="#cb36-23" tabindex="-1"></a>    object <span class="ot">&lt;-</span> GOlabels[i,<span class="dv">3</span>]</span>
+<span id="cb36-24"><a href="#cb36-24" tabindex="-1"></a>    rdf <span class="ot">&lt;-</span> <span class="fu">rdf_add</span>(rdf, subject, predicate, object)</span>
+<span id="cb36-25"><a href="#cb36-25" tabindex="-1"></a>    }</span>
+<span id="cb36-26"><a href="#cb36-26" tabindex="-1"></a></span>
+<span id="cb36-27"><a href="#cb36-27" tabindex="-1"></a>rdf</span></code></pre></div>
+<pre><code>## Total of 6955 triples, stored in hashes
+## -------------------------------
+## &lt;http://purl.obolibrary.org/obo/GO_0001975&gt; &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; &quot;response to amphetamine&quot; .
+## &lt;http://purl.obolibrary.org/obo/GO_0031748&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/GO_0003674&gt; .
+## &lt;http://purl.obolibrary.org/obo/GO_0033138&gt; &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; &quot;positive regulation of peptidyl-serine phosphorylation&quot; .
+## &lt;http://esd.bioinf.org/sequence/O75489&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/OGI_0000025&gt; .
+## &lt;http://esd.bioinf.org/protein/O43426&gt; &lt;https://schema.org/sameAs&gt; &lt;https://www.uniprot.org/uniprotkb/O43426/entry&gt; .
+## &lt;http://purl.obolibrary.org/obo/GO_0043066&gt; &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; &quot;negative regulation of apoptotic process&quot; .
+## &lt;http://purl.obolibrary.org/obo/GO_0033077&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://purl.obolibrary.org/obo/GO_0008150&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_1901006&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0006814&gt; .
+## &lt;http://esd.bioinf.org/protein/Q16795&gt; &lt;http://purl.obolibrary.org/obo/RO_0000056&gt; &lt;http://purl.obolibrary.org/obo/GO_0042776&gt; .
+## 
+## ... with 6945 more triples</code></pre>
+<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" tabindex="-1"></a><span class="do">## Obtener los términos ancestros de cada uno y etiquetarlos</span></span>
+<span id="cb38-2"><a href="#cb38-2" tabindex="-1"></a>ancestors <span class="ot">&lt;-</span> <span class="fu">get_ancestors</span>(go, <span class="st">&quot;GO:2000641&quot;</span>)</span>
+<span id="cb38-3"><a href="#cb38-3" tabindex="-1"></a>go<span class="sc">$</span>name[ancestors]</span></code></pre></div>
+</div>
+</div>
+<div id="añadir-al-grafo-rdf." class="section level4">
+<h4>Añadir al grafo RDF.</h4>
+<p>Mediante la función <em>rdf_serialize</em> construimos el fichero rdf
+definitivo que publicaremos en Blazegraph.</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" tabindex="-1"></a><span class="fu">rdf_serialize</span>(rdf, <span class="st">&quot;Parkinson.rdf&quot;</span>, <span class="at">format =</span> <span class="st">&quot;rdfxml&quot;</span>)  </span></code></pre></div>
+</div>
+</div>
+</div>
+<div id="queries" class="section level2">
+<h2>Queries</h2>
+<p>Para terminar, utilizaremos el paquete <em>SPARQL</em> para realizar
+una serie de consultas a nuestro dataset desde R, haciendo uso del
+endpoint correspondiente.</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" tabindex="-1"></a>endpoint <span class="ot">&lt;-</span> <span class="st">&quot;http://155.54.239.183:3045/blazegraph/namespace/ParkinsonRDF/sparql&quot;</span></span></code></pre></div>
+<div id="qué-proteínas-en-nuestra-base-de-datos-interactúan-entre-ellas" class="section level3">
+<h3>¿Qué proteínas en nuestra base de datos interactúan entre
+ellas?</h3>
+<p>Devolveremos aquellas proteínas que participan en la relación
+<em>Interacts.with</em> entre proteínas siendo tanto sujetos como
+objetos en alguno de los casos. La consulta devolverá la IRI propia de
+nuestro dataset y el nombre de la proteína, el cual se encuentra en su
+etiqueta</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" tabindex="-1"></a>query1 <span class="ot">&lt;-</span> <span class="st">&quot;PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;</span></span>
+<span id="cb41-2"><a href="#cb41-2" tabindex="-1"></a><span class="st">SELECT ?s (COALESCE(?label, STR(?s)) as ?ProteinName)</span></span>
+<span id="cb41-3"><a href="#cb41-3" tabindex="-1"></a><span class="st">WHERE {</span></span>
+<span id="cb41-4"><a href="#cb41-4" tabindex="-1"></a><span class="st">  ?s &lt;http://purl.obolibrary.org/obo/RO_0002434&gt; ?o .</span></span>
+<span id="cb41-5"><a href="#cb41-5" tabindex="-1"></a><span class="st">  ?o &lt;http://purl.obolibrary.org/obo/RO_0002434&gt; ?s .</span></span>
+<span id="cb41-6"><a href="#cb41-6" tabindex="-1"></a><span class="st">  OPTIONAL {</span></span>
+<span id="cb41-7"><a href="#cb41-7" tabindex="-1"></a><span class="st">    ?s rdfs:label ?label .</span></span>
+<span id="cb41-8"><a href="#cb41-8" tabindex="-1"></a><span class="st">  }</span></span>
+<span id="cb41-9"><a href="#cb41-9" tabindex="-1"></a><span class="st">}&quot;</span></span>
+<span id="cb41-10"><a href="#cb41-10" tabindex="-1"></a></span>
+<span id="cb41-11"><a href="#cb41-11" tabindex="-1"></a></span>
+<span id="cb41-12"><a href="#cb41-12" tabindex="-1"></a>qd1 <span class="ot">&lt;-</span> <span class="fu">SPARQL</span>(endpoint,query1)</span>
+<span id="cb41-13"><a href="#cb41-13" tabindex="-1"></a></span>
+<span id="cb41-14"><a href="#cb41-14" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">as.data.frame</span>(qd1<span class="sc">$</span>results), <span class="at">format =</span> <span class="st">&quot;html&quot;</span>,<span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+s
+</th>
+<th style="text-align:left;">
+ProteinName
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/O60260%3E" class="uri">http://esd.bioinf.org/protein/O60260&gt;</a>;
+</td>
+<td style="text-align:left;">
+E3 ubiquitin-protein ligase parkin (Parkin) (EC 2.3.2.31) (Parkin RBR E3
+ubiquitin-protein ligase) (Parkinson juvenile disease protein 2)
+(Parkinson disease protein 2)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/O60733%3E" class="uri">http://esd.bioinf.org/protein/O60733&gt;</a>;
+</td>
+<td style="text-align:left;">
+85/88 kDa calcium-independent phospholipase A2 (CaI-PLA2) (EC 3.1.1.4)
+(2-lysophosphatidylcholine acylhydrolase) (EC 3.1.1.5) (Group VI
+phospholipase A2) (GVI PLA2) (Intracellular membrane-associated
+calcium-independent phospholipase A2 beta) (iPLA2-beta) (Palmitoyl-CoA
+hydrolase) (EC 3.1.2.2) (Patatin-like phospholipase domain-containing
+protein 9) (PNPLA9)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/O75489%3E" class="uri">http://esd.bioinf.org/protein/O75489&gt;</a>;
+</td>
+<td style="text-align:left;">
+NADH dehydrogenase [ubiquinone] iron-sulfur protein 3, mitochondrial (EC
+7.1.1.2) (Complex I-30kD) (CI-30kD) (NADH-ubiquinone oxidoreductase 30
+kDa subunit)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q5S007%3E" class="uri">http://esd.bioinf.org/protein/Q5S007&gt;</a>;
+</td>
+<td style="text-align:left;">
+Leucine-rich repeat serine/threonine-protein kinase 2 (EC 2.7.11.1) (EC
+3.6.5.-) (Dardarin)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q5TEU4%3E" class="uri">http://esd.bioinf.org/protein/Q5TEU4&gt;</a>;
+</td>
+<td style="text-align:left;">
+Arginine-hydroxylase NDUFAF5, mitochondrial (EC 1.-.-.-) (NADH
+dehydrogenase [ubiquinone] 1 alpha subcomplex assembly factor 5)
+(Putative methyltransferase NDUFAF5) (EC 2.1.1.-)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9BXM7%3E" class="uri">http://esd.bioinf.org/protein/Q9BXM7&gt;</a>;
+</td>
+<td style="text-align:left;">
+Serine/threonine-protein kinase PINK1, mitochondrial (EC 2.7.11.1)
+(BRPK) (PTEN-induced putative kinase protein 1)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9P0J0%3E" class="uri">http://esd.bioinf.org/protein/Q9P0J0&gt;</a>;
+</td>
+<td style="text-align:left;">
+NADH dehydrogenase [ubiquinone] 1 alpha subcomplex subunit 13 (Cell
+death regulatory protein GRIM-19) (Complex I-B16.6) (CI-B16.6) (Gene
+associated with retinoic and interferon-induced mortality 19 protein)
+(GRIM-19) (Gene associated with retinoic and IFN-induced mortality 19
+protein) (NADH-ubiquinone oxidoreductase B16.6 subunit)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9Y3I1%3E" class="uri">http://esd.bioinf.org/protein/Q9Y3I1&gt;</a>;
+</td>
+<td style="text-align:left;">
+F-box only protein 7
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/O75306%3E" class="uri">http://esd.bioinf.org/protein/O75306&gt;</a>;
+</td>
+<td style="text-align:left;">
+NADH dehydrogenase [ubiquinone] iron-sulfur protein 2, mitochondrial (EC
+7.1.1.2) (Complex I-49kD) (CI-49kD) (NADH-ubiquinone oxidoreductase 49
+kDa subunit)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/P51970%3E" class="uri">http://esd.bioinf.org/protein/P51970&gt;</a>;
+</td>
+<td style="text-align:left;">
+NADH dehydrogenase [ubiquinone] 1 alpha subcomplex subunit 8 (Complex
+I-19kD) (CI-19kD) (Complex I-PGIV) (CI-PGIV) (NADH-ubiquinone
+oxidoreductase 19 kDa subunit)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/P10636%3E" class="uri">http://esd.bioinf.org/protein/P10636&gt;</a>;
+</td>
+<td style="text-align:left;">
+Microtubule-associated protein tau (Neurofibrillary tangle protein)
+(Paired helical filament-tau) (PHF-tau)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/P21554%3E" class="uri">http://esd.bioinf.org/protein/P21554&gt;</a>;
+</td>
+<td style="text-align:left;">
+Cannabinoid receptor 1 (CB-R) (CB1) (CANN6)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/O75489%3E" class="uri">http://esd.bioinf.org/protein/O75489&gt;</a>;
+</td>
+<td style="text-align:left;">
+NADH dehydrogenase [ubiquinone] iron-sulfur protein 3, mitochondrial (EC
+7.1.1.2) (Complex I-30kD) (CI-30kD) (NADH-ubiquinone oxidoreductase 30
+kDa subunit)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/P37840%3E" class="uri">http://esd.bioinf.org/protein/P37840&gt;</a>;
+</td>
+<td style="text-align:left;">
+Alpha-synuclein (Non-A beta component of AD amyloid) (Non-A4 component
+of amyloid precursor) (NACP)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q5S007%3E" class="uri">http://esd.bioinf.org/protein/Q5S007&gt;</a>;
+</td>
+<td style="text-align:left;">
+Leucine-rich repeat serine/threonine-protein kinase 2 (EC 2.7.11.1) (EC
+3.6.5.-) (Dardarin)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9Y6H5%3E" class="uri">http://esd.bioinf.org/protein/Q9Y6H5&gt;</a>;
+</td>
+<td style="text-align:left;">
+Synphilin-1 (Sph1) (Alpha-synuclein-interacting protein)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q04637%3E" class="uri">http://esd.bioinf.org/protein/Q04637&gt;</a>;
+</td>
+<td style="text-align:left;">
+Eukaryotic translation initiation factor 4 gamma 1 (eIF-4-gamma 1)
+(eIF-4G 1) (eIF-4G1) (p220)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/A1L188%3E" class="uri">http://esd.bioinf.org/protein/A1L188&gt;</a>;
+</td>
+<td style="text-align:left;">
+NADH dehydrogenase [ubiquinone] 1 alpha subcomplex assembly factor 8
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/O60260%3E" class="uri">http://esd.bioinf.org/protein/O60260&gt;</a>;
+</td>
+<td style="text-align:left;">
+E3 ubiquitin-protein ligase parkin (Parkin) (EC 2.3.2.31) (Parkin RBR E3
+ubiquitin-protein ligase) (Parkinson juvenile disease protein 2)
+(Parkinson disease protein 2)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/P37840%3E" class="uri">http://esd.bioinf.org/protein/P37840&gt;</a>;
+</td>
+<td style="text-align:left;">
+Alpha-synuclein (Non-A beta component of AD amyloid) (Non-A4 component
+of amyloid precursor) (NACP)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q5S007%3E" class="uri">http://esd.bioinf.org/protein/Q5S007&gt;</a>;
+</td>
+<td style="text-align:left;">
+Leucine-rich repeat serine/threonine-protein kinase 2 (EC 2.7.11.1) (EC
+3.6.5.-) (Dardarin)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q99497%3E" class="uri">http://esd.bioinf.org/protein/Q99497&gt;</a>;
+</td>
+<td style="text-align:left;">
+Parkinson disease protein 7 (Maillard deglycase) (Oncogene DJ1)
+(Parkinsonism-associated deglycase) (Protein DJ-1) (DJ-1)
+(Protein/nucleic acid deglycase DJ-1) (EC 3.1.2.-, EC 3.5.1.-, EC
+3.5.1.124)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/P37840%3E" class="uri">http://esd.bioinf.org/protein/P37840&gt;</a>;
+</td>
+<td style="text-align:left;">
+Alpha-synuclein (Non-A beta component of AD amyloid) (Non-A4 component
+of amyloid precursor) (NACP)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9Y6H5%3E" class="uri">http://esd.bioinf.org/protein/Q9Y6H5&gt;</a>;
+</td>
+<td style="text-align:left;">
+Synphilin-1 (Sph1) (Alpha-synuclein-interacting protein)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/O60260%3E" class="uri">http://esd.bioinf.org/protein/O60260&gt;</a>;
+</td>
+<td style="text-align:left;">
+E3 ubiquitin-protein ligase parkin (Parkin) (EC 2.3.2.31) (Parkin RBR E3
+ubiquitin-protein ligase) (Parkinson juvenile disease protein 2)
+(Parkinson disease protein 2)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9NX14%3E" class="uri">http://esd.bioinf.org/protein/Q9NX14&gt;</a>;
+</td>
+<td style="text-align:left;">
+NADH dehydrogenase [ubiquinone] 1 beta subcomplex subunit 11,
+mitochondrial (Complex I-ESSS) (CI-ESSS) (NADH-ubiquinone oxidoreductase
+ESSS subunit) (Neuronal protein 17.3) (Np17.3) (p17.3)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9P032%3E" class="uri">http://esd.bioinf.org/protein/Q9P032&gt;</a>;
+</td>
+<td style="text-align:left;">
+NADH dehydrogenase [ubiquinone] 1 alpha subcomplex assembly factor 4
+(Hormone-regulated proliferation-associated protein of 20 kDa)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9Y3I1%3E" class="uri">http://esd.bioinf.org/protein/Q9Y3I1&gt;</a>;
+</td>
+<td style="text-align:left;">
+F-box only protein 7
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/O43464%3E" class="uri">http://esd.bioinf.org/protein/O43464&gt;</a>;
+</td>
+<td style="text-align:left;">
+Serine protease HTRA2, mitochondrial (EC 3.4.21.108) (High temperature
+requirement protein A2) (HtrA2) (Omi stress-regulated endoprotease)
+(Serine protease 25) (Serine proteinase OMI)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/O60260%3E" class="uri">http://esd.bioinf.org/protein/O60260&gt;</a>;
+</td>
+<td style="text-align:left;">
+E3 ubiquitin-protein ligase parkin (Parkin) (EC 2.3.2.31) (Parkin RBR E3
+ubiquitin-protein ligase) (Parkinson juvenile disease protein 2)
+(Parkinson disease protein 2)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9BU61%3E" class="uri">http://esd.bioinf.org/protein/Q9BU61&gt;</a>;
+</td>
+<td style="text-align:left;">
+NADH dehydrogenase [ubiquinone] 1 alpha subcomplex assembly factor 3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9BXM7%3E" class="uri">http://esd.bioinf.org/protein/Q9BXM7&gt;</a>;
+</td>
+<td style="text-align:left;">
+Serine/threonine-protein kinase PINK1, mitochondrial (EC 2.7.11.1)
+(BRPK) (PTEN-induced putative kinase protein 1)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/Q9NPL8%3E" class="uri">http://esd.bioinf.org/protein/Q9NPL8&gt;</a>;
+</td>
+<td style="text-align:left;">
+Complex I assembly factor TIMMDC1, mitochondrial (Protein M5-14)
+(Translocase of inner mitochondrial membrane domain-containing protein
+1) (TIMM domain containing-protein 1)
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="qué-enfermedades-se-repiten-y-cuántas-veces" class="section level3">
+<h3>¿Qué Enfermedades se repiten y cuántas veces?</h3>
+<p>La siguiente consulta devolverá aquellas enfermedades que participen
+en una relación <em>Contributes to condition</em> como objeto más de 1
+vez, se contará las veces que aparezca y se mostrará junto con el nombre
+de la enfermedad, el cual se encuentra en la etiqueta.</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" tabindex="-1"></a>query2 <span class="ot">&lt;-</span> <span class="st">&quot;PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;</span></span>
+<span id="cb42-2"><a href="#cb42-2" tabindex="-1"></a><span class="st">SELECT ?disease (COUNT(?o) as ?count)</span></span>
+<span id="cb42-3"><a href="#cb42-3" tabindex="-1"></a><span class="st">WHERE {</span></span>
+<span id="cb42-4"><a href="#cb42-4" tabindex="-1"></a><span class="st">  ?s &lt;http://purl.obolibrary.org/obo/RO_0003302&gt; ?o .</span></span>
+<span id="cb42-5"><a href="#cb42-5" tabindex="-1"></a><span class="st">  ?o rdfs:label ?disease</span></span>
+<span id="cb42-6"><a href="#cb42-6" tabindex="-1"></a><span class="st">}</span></span>
+<span id="cb42-7"><a href="#cb42-7" tabindex="-1"></a><span class="st">GROUP BY ?disease</span></span>
+<span id="cb42-8"><a href="#cb42-8" tabindex="-1"></a><span class="st">HAVING (COUNT(?o) &gt; 1)</span></span>
+<span id="cb42-9"><a href="#cb42-9" tabindex="-1"></a><span class="st">ORDER BY DESC(?count)&quot;</span></span>
+<span id="cb42-10"><a href="#cb42-10" tabindex="-1"></a></span>
+<span id="cb42-11"><a href="#cb42-11" tabindex="-1"></a></span>
+<span id="cb42-12"><a href="#cb42-12" tabindex="-1"></a>qd2 <span class="ot">&lt;-</span> <span class="fu">SPARQL</span>(endpoint,query2)</span>
+<span id="cb42-13"><a href="#cb42-13" tabindex="-1"></a></span>
+<span id="cb42-14"><a href="#cb42-14" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">as.data.frame</span>(qd2<span class="sc">$</span>results), <span class="at">format =</span> <span class="st">&quot;html&quot;</span>,<span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+disease
+</th>
+<th style="text-align:right;">
+count
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE, LATE-ONSET; PD
+</td>
+<td style="text-align:right;">
+6
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="qué-enfermedades-asociadas-contienen-la-palabra-parkinson-en-su-descripción" class="section level3">
+<h3>¿Qué enfermedades asociadas contienen la palabra “Parkinson” en su
+descripción?</h3>
+<div class="sourceCode" id="cb43"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" tabindex="-1"></a>query3 <span class="ot">&lt;-</span> <span class="st">&#39;PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;</span></span>
+<span id="cb43-2"><a href="#cb43-2" tabindex="-1"></a><span class="st">SELECT ?label </span></span>
+<span id="cb43-3"><a href="#cb43-3" tabindex="-1"></a><span class="st">WHERE {</span></span>
+<span id="cb43-4"><a href="#cb43-4" tabindex="-1"></a><span class="st">  ?s &lt;http://purl.obolibrary.org/obo/RO_0003302&gt; ?objeto .</span></span>
+<span id="cb43-5"><a href="#cb43-5" tabindex="-1"></a><span class="st">  ?objeto rdfs:label ?label .</span></span>
+<span id="cb43-6"><a href="#cb43-6" tabindex="-1"></a><span class="st">  FILTER( regex(str(?label), &quot;Parkinson&quot;, &quot;i&quot;) )</span></span>
+<span id="cb43-7"><a href="#cb43-7" tabindex="-1"></a><span class="st">}</span></span>
+<span id="cb43-8"><a href="#cb43-8" tabindex="-1"></a><span class="st">GROUP BY ?label&#39;</span></span>
+<span id="cb43-9"><a href="#cb43-9" tabindex="-1"></a></span>
+<span id="cb43-10"><a href="#cb43-10" tabindex="-1"></a></span>
+<span id="cb43-11"><a href="#cb43-11" tabindex="-1"></a>qd3 <span class="ot">&lt;-</span> <span class="fu">SPARQL</span>(endpoint,query3)</span>
+<span id="cb43-12"><a href="#cb43-12" tabindex="-1"></a></span>
+<span id="cb43-13"><a href="#cb43-13" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">as.data.frame</span>(<span class="fu">t</span>(qd3<span class="sc">$</span>results)), <span class="at">format =</span> <span class="st">&quot;html&quot;</span>,<span class="at">row.names =</span> <span class="cn">FALSE</span>, <span class="at">col.names =</span> <span class="st">&quot;Disease&quot;</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+Disease
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE, LATE-ONSET; PD
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 1, AUTOSOMAL DOMINANT; PARK1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+WOLFF-PARKINSON-WHITE SYNDROME; WPW
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 15, AUTOSOMAL RECESSIVE EARLY-ONSET; PARK15
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON-DEMENTIA SYNDROME
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 2, AUTOSOMAL RECESSIVE JUVENILE; PARK2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 4, AUTOSOMAL DOMINANT; PARK4
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 6, AUTOSOMAL RECESSIVE EARLY-ONSET; PARK6
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 7, AUTOSOMAL RECESSIVE EARLY-ONSET; PARK7
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 8, AUTOSOMAL DOMINANT; PARK8
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 11, AUTOSOMAL DOMINANT, SUSCEPTIBILITY TO; PARK11
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 13, AUTOSOMAL DOMINANT, SUSCEPTIBILITY TO; PARK13
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 14, AUTOSOMAL RECESSIVE; PARK14
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 5, AUTOSOMAL DOMINANT, SUSCEPTIBILITY TO; PARK5
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 17; PARK17
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 18, AUTOSOMAL DOMINANT, SUSCEPTIBILITY TO; PARK18
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 19A, JUVENILE-ONSET; PARK19A
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 20, EARLY-ONSET; PARK20
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 22, AUTOSOMAL DOMINANT; PARK22
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 23, AUTOSOMAL RECESSIVE EARLY-ONSET; PARK23
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PARKINSON DISEASE 24, AUTOSOMAL DOMINANT, SUSCEPTIBILITY TO; PARK24
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="qué-proteínas-participan-en-el-desarrollo-de-más-de-un-tipo-de-parkinson" class="section level3">
+<h3>¿Qué proteínas participan en el desarrollo de más de un tipo de
+Parkinson?</h3>
+<p>Seleccionaremos aquellas proteínas con más de un tipo de relación
+“Contributes to condition” que contenga la palabra Parkinson en su
+descripción, la cual está presente en su etiqueta.</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" tabindex="-1"></a>query4 <span class="ot">&lt;-</span> <span class="st">&#39;PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;</span></span>
+<span id="cb44-2"><a href="#cb44-2" tabindex="-1"></a><span class="st">SELECT ?s (COUNT(?label) as ?count)</span></span>
+<span id="cb44-3"><a href="#cb44-3" tabindex="-1"></a><span class="st">WHERE {</span></span>
+<span id="cb44-4"><a href="#cb44-4" tabindex="-1"></a><span class="st">  ?s &lt;http://purl.obolibrary.org/obo/RO_0003302&gt; ?objeto .</span></span>
+<span id="cb44-5"><a href="#cb44-5" tabindex="-1"></a><span class="st">  ?objeto rdfs:label ?label .</span></span>
+<span id="cb44-6"><a href="#cb44-6" tabindex="-1"></a><span class="st">  FILTER( regex(str(?label), &quot;Parkinson&quot;, &quot;i&quot;) )</span></span>
+<span id="cb44-7"><a href="#cb44-7" tabindex="-1"></a><span class="st">}</span></span>
+<span id="cb44-8"><a href="#cb44-8" tabindex="-1"></a><span class="st">GROUP BY ?s</span></span>
+<span id="cb44-9"><a href="#cb44-9" tabindex="-1"></a><span class="st">HAVING (COUNT(?label) &gt; 1)</span></span>
+<span id="cb44-10"><a href="#cb44-10" tabindex="-1"></a><span class="st">&#39;</span></span>
+<span id="cb44-11"><a href="#cb44-11" tabindex="-1"></a></span>
+<span id="cb44-12"><a href="#cb44-12" tabindex="-1"></a></span>
+<span id="cb44-13"><a href="#cb44-13" tabindex="-1"></a>qd4 <span class="ot">&lt;-</span> <span class="fu">SPARQL</span>(endpoint,query4)</span>
+<span id="cb44-14"><a href="#cb44-14" tabindex="-1"></a></span>
+<span id="cb44-15"><a href="#cb44-15" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">as.data.frame</span>(qd4<span class="sc">$</span>results), <span class="at">format =</span> <span class="st">&quot;html&quot;</span>,<span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+s
+</th>
+<th style="text-align:right;">
+count
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/O60260%3E" class="uri">http://esd.bioinf.org/protein/O60260&gt;</a>;
+</td>
+<td style="text-align:right;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://esd.bioinf.org/protein/P37840%3E" class="uri">http://esd.bioinf.org/protein/P37840&gt;</a>;
+</td>
+<td style="text-align:right;">
+2
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="qué-tipos-de-clases-contiene-el-dataset" class="section level3">
+<h3>¿Qué tipos de clases contiene el dataset?</h3>
+<div class="sourceCode" id="cb45"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" tabindex="-1"></a>query5 <span class="ot">&lt;-</span> <span class="st">&#39;PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;</span></span>
+<span id="cb45-2"><a href="#cb45-2" tabindex="-1"></a><span class="st">PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;</span></span>
+<span id="cb45-3"><a href="#cb45-3" tabindex="-1"></a><span class="st">SELECT ?label</span></span>
+<span id="cb45-4"><a href="#cb45-4" tabindex="-1"></a><span class="st">WHERE {</span></span>
+<span id="cb45-5"><a href="#cb45-5" tabindex="-1"></a><span class="st">  ?s rdf:type ?o .</span></span>
+<span id="cb45-6"><a href="#cb45-6" tabindex="-1"></a><span class="st">  ?o rdfs:label ?label .</span></span>
+<span id="cb45-7"><a href="#cb45-7" tabindex="-1"></a><span class="st">}</span></span>
+<span id="cb45-8"><a href="#cb45-8" tabindex="-1"></a><span class="st">GROUP BY ?label&#39;</span></span>
+<span id="cb45-9"><a href="#cb45-9" tabindex="-1"></a></span>
+<span id="cb45-10"><a href="#cb45-10" tabindex="-1"></a></span>
+<span id="cb45-11"><a href="#cb45-11" tabindex="-1"></a>qd5 <span class="ot">&lt;-</span> <span class="fu">SPARQL</span>(endpoint,query5)</span>
+<span id="cb45-12"><a href="#cb45-12" tabindex="-1"></a></span>
+<span id="cb45-13"><a href="#cb45-13" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">as.data.frame</span>(<span class="fu">t</span>(qd5<span class="sc">$</span>results)), <span class="at">format =</span> <span class="st">&quot;html&quot;</span>,<span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+V1
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Cellular Component
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Biological Process
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Disease
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Molecular Function
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Peptide sequence
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Protein
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="cuales-son-los-componentes-celulares-en-los-que-más-proteínas-están-presentes" class="section level3">
+<h3>¿Cuales son los componentes celulares en los que más proteínas están
+presentes?</h3>
+<p>Se van a obtener aquellos 5 componentes celulares que más veces
+aparezcan, acompañados del número de proteínas de nuestro dataset que
+forman parte de ellos.</p>
+<div class="sourceCode" id="cb46"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" tabindex="-1"></a>query6 <span class="ot">&lt;-</span> <span class="st">&#39;SELECT ?o (COUNT(?o) AS ?Proteins)</span></span>
+<span id="cb46-2"><a href="#cb46-2" tabindex="-1"></a><span class="st">WHERE {</span></span>
+<span id="cb46-3"><a href="#cb46-3" tabindex="-1"></a><span class="st">  ?s &lt;http://purl.obolibrary.org/obo/BFO_0000050&gt; ?o .</span></span>
+<span id="cb46-4"><a href="#cb46-4" tabindex="-1"></a><span class="st">}</span></span>
+<span id="cb46-5"><a href="#cb46-5" tabindex="-1"></a><span class="st">GROUP BY ?o</span></span>
+<span id="cb46-6"><a href="#cb46-6" tabindex="-1"></a><span class="st">ORDER BY DESC(?Proteins)</span></span>
+<span id="cb46-7"><a href="#cb46-7" tabindex="-1"></a><span class="st">LIMIT 5&#39;</span></span>
+<span id="cb46-8"><a href="#cb46-8" tabindex="-1"></a></span>
+<span id="cb46-9"><a href="#cb46-9" tabindex="-1"></a></span>
+<span id="cb46-10"><a href="#cb46-10" tabindex="-1"></a>qd6 <span class="ot">&lt;-</span> <span class="fu">SPARQL</span>(endpoint,query6)</span>
+<span id="cb46-11"><a href="#cb46-11" tabindex="-1"></a></span>
+<span id="cb46-12"><a href="#cb46-12" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">as.data.frame</span>(qd6<span class="sc">$</span>results), <span class="at">format =</span> <span class="st">&quot;html&quot;</span>,<span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+o
+</th>
+<th style="text-align:right;">
+Proteins
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://purl.obolibrary.org/obo/GO_0005739%3E" class="uri">http://purl.obolibrary.org/obo/GO_0005739&gt;</a>;
+</td>
+<td style="text-align:right;">
+41
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://purl.obolibrary.org/obo/GO_0005743%3E" class="uri">http://purl.obolibrary.org/obo/GO_0005743&gt;</a>;
+</td>
+<td style="text-align:right;">
+37
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://purl.obolibrary.org/obo/GO_0005747%3E" class="uri">http://purl.obolibrary.org/obo/GO_0005747&gt;</a>;
+</td>
+<td style="text-align:right;">
+28
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://purl.obolibrary.org/obo/GO_0005829%3E" class="uri">http://purl.obolibrary.org/obo/GO_0005829&gt;</a>;
+</td>
+<td style="text-align:right;">
+25
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+&lt;<a href="http://purl.obolibrary.org/obo/GO_0005737%3E" class="uri">http://purl.obolibrary.org/obo/GO_0005737&gt;</a>;
+</td>
+<td style="text-align:right;">
+20
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="alguna-proteína-contiene-en-su-secuencia-todos-los-tipos-de-aminoácidos-buscar-dentro-del-string" class="section level3">
+<h3>¿Alguna proteína contiene en su secuencia todos los tipos de
+aminoácidos? (Buscar dentro del string)</h3>
+<div class="sourceCode" id="cb47"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" tabindex="-1"></a>query6 <span class="ot">&lt;-</span> <span class="st">&#39;SELECT ?s ?o</span></span>
+<span id="cb47-2"><a href="#cb47-2" tabindex="-1"></a><span class="st">WHERE {</span></span>
+<span id="cb47-3"><a href="#cb47-3" tabindex="-1"></a><span class="st">  ?s &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; ?o .</span></span>
+<span id="cb47-4"><a href="#cb47-4" tabindex="-1"></a><span class="st">  FILTER (</span></span>
+<span id="cb47-5"><a href="#cb47-5" tabindex="-1"></a><span class="st">    REGEX(STR(?s), &quot;http://esd.bioinf.org/sequence/&quot;) &amp;&amp;</span></span>
+<span id="cb47-6"><a href="#cb47-6" tabindex="-1"></a><span class="st">    REGEX(STR(?o), &quot;.*[A].*[R].*[N].*[D].*[C].*[E].*[Q].*[E].*[G].*[H].*[I].*[L].*[K].*[M].*[F].*[P].*[S].*[T].*[W].*[Y].*[V].*&quot;)</span></span>
+<span id="cb47-7"><a href="#cb47-7" tabindex="-1"></a><span class="st">  )</span></span>
+<span id="cb47-8"><a href="#cb47-8" tabindex="-1"></a><span class="st">}&#39;</span></span>
+<span id="cb47-9"><a href="#cb47-9" tabindex="-1"></a></span>
+<span id="cb47-10"><a href="#cb47-10" tabindex="-1"></a></span>
+<span id="cb47-11"><a href="#cb47-11" tabindex="-1"></a>qd6 <span class="ot">&lt;-</span> <span class="fu">SPARQL</span>(endpoint,query6)</span>
+<span id="cb47-12"><a href="#cb47-12" tabindex="-1"></a></span>
+<span id="cb47-13"><a href="#cb47-13" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">as.data.frame</span>(qd6<span class="sc">$</span>results), <span class="at">format =</span> <span class="st">&quot;html&quot;</span>,<span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
